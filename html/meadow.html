@@ -1,15 +1,59 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <title>Prairie</title>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prairie, Carte, Rapport</title>
     <link rel="stylesheet" href="./../css/meadow.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
     <script src="./../js/meadow.js"></script>
 </head>
-
 <body>
-    <p>Page prairie</p>
-</body>
 
+    <!-- Header commun -->
+    <header class="main-header">
+        <button class="menu-btn">☰</button>
+        <h1 class="page-title">Consommation et production de viande dans le monde</h1>
+    </header>
+
+    <div class="container">
+        <!-- Section Prairie -->
+        <div class="section prairie">
+            <h1>Prairie</h1>
+            <div class="ciel"></div>
+            <div class="terre"></div>
+        </div>
+
+        <!-- Section Carte et Graphiques -->
+        <div class="section carte-graph">
+            <h1>Carte et Graphiques</h1>
+            <div class="graph-container">
+                <div class="left-side">
+                    <!-- Filtrage et recherche -->
+                    <div class="filters-search">
+                        <button class="filter-btn">Filtre 1</button>
+                        <button class="filter-btn">Filtre 2</button>
+                        <input type="text" class="search-bar" placeholder="Rechercher...">
+                    </div>
+                    <!-- Carte et graphe1-->
+                    <div class="map">Carte ici</div>
+                    <div class="graph">Graphique principal ici</div>
+                </div>
+                <div class="right-side">
+                    <!-- Bloc des graphiques et légendes -->
+                    <div class="legend">Légendes ici</div>
+                    <div class="secondary-graph">Deuxième graphique ici</div>
+                </div>
+            </div>
+        </div>  
+
+        <!-- Section Rapport -->
+        <div class="section rapport">
+            <h1>Rapport</h1>
+            <div class="rapport-content">
+                <p>Contenu du rapport ici.</p>
+            </div>
+        </div>
+    </div>
+</body>
 </html>
