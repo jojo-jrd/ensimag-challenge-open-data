@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viande dans le monde</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="./../js/common.js"></script>
@@ -17,9 +18,9 @@
         
             <!-- Desktop Menu -->
             <nav class="hidden md:flex space-x-6">
-                <a href="#" class="hover:text-gray-300">Prairie</a>
+                <a href="./meadow.html" class="hover:text-gray-300">Prairie</a>
                 <a href="./consumtion-production.html" class="hover:text-gray-300">Production/Consommation</a>
-                <a href="./prices.html" class="hover:text-gray-300">Prix</a>
+                <a href="#" class="hover:text-gray-300">Prix</a>
                 <a href="./report.html" class="hover:text-gray-300">Rapport</a>
             </nav>
         
@@ -35,18 +36,18 @@
         
         <!-- Mobile Menu -->
         <div id="mobile-menu" class="hidden md:hidden bg-gray-700">
-            <a href="#" class="block py-2 px-4 hover:bg-gray-600">Prairie</a>
+            <a href="./meadow.html" class="block py-2 px-4 hover:bg-gray-600">Prairie</a>
             <a href="./consumtion-production.html" class="block py-2 px-4 hover:bg-gray-600">Production/Consommation</a>
-            <a href="./prices.html" class="block py-2 px-4 hover:bg-gray-600">Prix</a>
+            <a href="#" class="block py-2 px-4 hover:bg-gray-600">Prix</a>
             <a href="./report.html" class="block py-2 px-4 hover:bg-gray-600">Rapport</a>
         </div>
     </header>
 
-    <!-- Section Prairie -->
-    <div class="text-center">
-        <h1 class="text-3xl font-bold mb-4">Prairie</h1>
-        <div class="ciel bg-green-500 h-48"></div>
-        <div class="terre bg-blue-500 h-72"></div>
+    <!-- Section Carte et Graphiques -->
+    <div class="section bg-gray-100 p-5">
+        <h1 class="text-3xl font-bold mb-4 text-center">Carte des Prix</h1>
+        <input type="range" min="1940" max="2024"/>
     </div>
+    
 </body>
 </html>

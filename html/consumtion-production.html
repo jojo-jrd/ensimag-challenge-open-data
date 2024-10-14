@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viande dans le monde</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="./../js/consumption-production.js"></script>
+    <script src="./../js/common.js"></script>
+</head>
+<body>
+    <!-- Header commun -->
+    <header class="bg-gray-800 text-white">
+        <div class="container mx-auto flex justify-between items-center py-4 px-5">
+            <!-- Logo -->
+            <div class="text-2xl font-bold">La viande dans le monde</div>
+        
+            <!-- Desktop Menu -->
+            <nav class="hidden md:flex space-x-6">
+                <a href="./meadow.html" class="hover:text-gray-300">Prairie</a>
+                <a href="#" class="hover:text-gray-300">Production/Consommation</a>
+                <a href="./prices.html" class="hover:text-gray-300">Prix</a>
+                <a href="./report.html" class="hover:text-gray-300">Rapport</a>
+            </nav>
+        
+            <!-- Hamburger Icon -->
+            <div class="md:hidden flex items-center">
+                <button id="menu-btn" class="focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-gray-700">
+            <a href="./meadow.html" class="block py-2 px-4 hover:bg-gray-600">Prairie</a>
+            <a href="#" class="block py-2 px-4 hover:bg-gray-600">Production/Consommation</a>
+            <a href="./prices.html" class="block py-2 px-4 hover:bg-gray-600">Prix</a>
+            <a href="./report.html" class="block py-2 px-4 hover:bg-gray-600">Rapport</a>
+        </div>
+    </header>
+    
+    <!-- Section Carte et Graphiques -->
+    <div class="section bg-gray-100 p-5">
+        <h1 class="text-3xl font-bold mb-4 text-center">Carte et Graphiques</h1>
+        <div class="graph-container flex">
+            <div class="left-side w-3/4 mr-4">
+                <!-- Filtrage et recherche -->
+                <div class="flex justify-between items-center mb-5">
+                    <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 1</button>
+                    <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 2</button>
+                    <input type="text" class="search-bar px-3 py-2 border border-gray-300 rounded" placeholder="Rechercher...">
+                </div>
+                <!-- Carte et graphe 1-->
+                <div class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
+                <div class="graph h-48 bg-gray-200 flex justify-center items-center">Graphique principal ici</div>
+            </div>
+            <div class="right-side w-1/2">
+                <!-- Bloc des graphiques et légendes -->
+                <div class="legend h-72 bg-gray-300 mb-5 flex justify-center items-center">Légendes ici</div>
+                <div class="secondary-graph h-64 bg-gray-300 flex justify-center items-center">Deuxième graphique ici</div>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>
