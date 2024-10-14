@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prairie, Carte, Rapport</title>
-    <link rel="stylesheet" href="./../css/meadow.css">
+    <!-- <link rel="stylesheet" href="./../css/meadow.css"> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="./../js/meadow.js"></script>
 </head>
 <body>
@@ -16,44 +18,45 @@
         <h1 class="page-title">Consommation et production de viande dans le monde</h1>
     </header>
 
-    <div class="container">
+    <div class="mx-auto">
         <!-- Section Prairie -->
-        <div class="section prairie">
-            <h1>Prairie</h1>
-            <div class="ciel"></div>
-            <div class="terre"></div>
+        <div class="text-center">
+            <h1 class="text-3xl font-bold mb-4">Prairie</h1>
+            <div class="ciel bg-green-500 h-48"></div>
+            <div class="terre bg-blue-500 h-72"></div>
         </div>
-
+    
         <!-- Section Carte et Graphiques -->
-        <div class="section carte-graph">
-            <h1>Carte et Graphiques</h1>
-            <div class="graph-container">
-                <div class="left-side">
+        <div class="section bg-gray-100 p-5">
+            <h1 class="text-3xl font-bold mb-4 text-center">Carte et Graphiques</h1>
+            <div class="graph-container flex">
+                <div class="left-side w-3/4 mr-4">
                     <!-- Filtrage et recherche -->
-                    <div class="filters-search">
-                        <button class="filter-btn">Filtre 1</button>
-                        <button class="filter-btn">Filtre 2</button>
-                        <input type="text" class="search-bar" placeholder="Rechercher...">
+                    <div class="flex justify-between items-center mb-5">
+                        <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 1</button>
+                        <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 2</button>
+                        <input type="text" class="search-bar px-3 py-2 border border-gray-300 rounded" placeholder="Rechercher...">
                     </div>
-                    <!-- Carte et graphe1-->
-                    <div class="map">Carte ici</div>
-                    <div class="graph">Graphique principal ici</div>
+                    <!-- Carte et graphe 1-->
+                    <div class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
+                    <div class="graph h-48 bg-gray-200 flex justify-center items-center">Graphique principal ici</div>
                 </div>
-                <div class="right-side">
+                <div class="right-side w-1/2">
                     <!-- Bloc des graphiques et légendes -->
-                    <div class="legend">Légendes ici</div>
-                    <div class="secondary-graph">Deuxième graphique ici</div>
+                    <div class="legend h-72 bg-gray-300 mb-5 flex justify-center items-center">Légendes ici</div>
+                    <div class="secondary-graph h-64 bg-gray-300 flex justify-center items-center">Deuxième graphique ici</div>
                 </div>
             </div>
         </div>  
-
+    
         <!-- Section Rapport -->
-        <div class="section rapport">
-            <h1>Rapport</h1>
-            <div class="rapport-content">
+        <div class="bg-purple-300 text-white h-128 text-center py-10">
+            <h1 class="text-3xl font-bold mb-4">Rapport</h1>
+            <div class="rapport-content bg-white text-black p-5 rounded mx-auto w-1/2">
                 <p>Contenu du rapport ici.</p>
             </div>
         </div>
     </div>
+    
 </body>
 </html>
