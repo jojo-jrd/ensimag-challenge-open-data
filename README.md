@@ -1,6 +1,15 @@
 # Proposition d’application - Challenge Open Data 3A
 ### Jordan Josserand, Florian Cunsolo, Wafi Grissi, Clément Correnoz, Hippolyte Bergeon
 
+## Utilisation
+
+Il faut lancer la commande : 
+```python
+python3 -m http.server 8000
+```
+
+Puis se connecter à [http:localhost:8000](http:localhost:8000)
+
 ## Données
 
 Nous partons sur le sujet des viandes dans le monde avec la consommation ainsi que la production et les prix dans le monde. Pour cela, nous allons utiliser plusieurs sources de données : 
