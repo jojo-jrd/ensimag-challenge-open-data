@@ -39,6 +39,10 @@ Une page serait dédiée à une **prairie** avec chaque animal avec un affichage
 
 Une page serait dédiée au **rapport détaillé** de la conception du projet, développement et rapport.
 
+## Design
+
+Nous utilisons ici les sources de tailwind générés directement dans le fichier `tailwind.css`.
+
 ## Esquisses
 
 Nous avons imaginé cette première version du mockup :
