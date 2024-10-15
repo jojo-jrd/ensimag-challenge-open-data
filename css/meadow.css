@@ -1,0 +1,109 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    position: relative;
+    background-image: url('../images/cardboard.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    overflow-x: hidden;
+}
+
+body::before, body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    width: 20px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+body::before {
+    left: 0;
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
+}
+
+body::after {
+    right: 0;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.content-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 0;
+    margin-top: 10%;
+    margin-bottom: 10%;
+}
+
+.content-image {
+    max-width: 100%;
+    transform: rotate(-4deg);
+    object-fit: contain;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background-image: url('../images/grass.jpg');
+    background-size: cover;
+    background-position: bottom center;
+    background-repeat: no-repeat;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.603);
+
+}
+
+.filter-overlay {
+    position: fixed; /* Reste fixe par rapport à la fenêtre */
+    top: 64px; /* Ajustez cette valeur selon la hauteur de votre header */
+    left: 0;
+    width: 100%;
+    height: calc(100% - 64px); /* Ajustez cette valeur selon la hauteur de votre header */
+    background-image: url('../images/film-plastique.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 1; /* Doit être au-dessus du fond, mais sous le header */
+}
+
+.edu-au-vic-wa-nt-guides {
+    font-family: "Edu AU VIC WA NT Guides", cursive;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.sticker-container {
+    position: fixed;
+    top: 80px;
+    right: 110px;
+    z-index: 3;
+}
+
+.sticker-container img {
+    width: 15vw;
+    height: auto;
+    transform: rotate(5deg);
+}
+
+.nutrition-container {
+    position: fixed;
+    bottom: 80px;
+    left: 80px;
+    z-index: 3;
+}
+
+.nutrition-container img {
+    width: 15vw;
+    height: auto;
+    transform: rotate(-3deg);
+}
+
+

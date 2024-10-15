@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viande dans le monde</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="./../js/common.js"></script>
+    <script src="./../js/meadow.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/yesiamrocks/cssanimation.io@1.0.3/cssanimation.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./../css/meadow.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Edu+AU+VIC+WA+NT+Guides:wght@400..700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Header commun -->
@@ -42,11 +47,27 @@
         </div>
     </header>
 
+    <div class="filter-overlay"></div>
+
     <!-- Section Prairie -->
     <div class="text-center">
-        <h1 class="text-3xl font-bold mb-4">Prairie</h1>
-        <div class="ciel bg-green-500 h-48"></div>
-        <div class="terre bg-blue-500 h-72"></div>
+        
+        <!-- <div class="ciel h-48">
+            <h1 class="text-5xl font-bold mb-4 edu-au-vic-wa-nt-guides cssanimation lePeek sequence text-white">Prairie</h1>
+        </div>
+        <div class="terre h-72"></div> -->
+
+        <div class="content-container">
+            <img src="../images/contentSpace.png" alt="Content Space" class="content-image">
+        </div>
+
+        <div class="sticker-container">
+            <img src="../images/etiquetteViande.png" alt="étiquette challenge">
+        </div>
+
+        <div class="nutrition-container">
+            <img src="../images/nutrition-facts-label.png" alt="étiquette crédits">
+        </div>
     </div>
 </body>
 </html>
