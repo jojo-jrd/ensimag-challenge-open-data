@@ -52,13 +52,14 @@
             <div class="left-side w-3/4 mr-4">
                 <!-- Filtrage et recherche -->
                 <div class="flex justify-between items-center mb-5">
-                    <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 1</button>
-                    <button class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Filtre 2</button>
+                    <button id="productionButton" class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Production</button>
+                    <button id="consumptionButton" class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Consommation</button>
+                    <input id="dateInput" type="range" min="1961" max="2026"/>
                     <input type="text" class="search-bar px-3 py-2 border border-gray-300 rounded" placeholder="Rechercher...">
                 </div>
                 <!-- Carte et graphe 1-->
-                <div class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
-                <div class="graph h-48 bg-gray-200 flex justify-center items-center">Graphique principal ici</div>
+                <div id="graph-map" class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
+                <div id="graph1" class="graph h-48 bg-gray-200 flex justify-center items-center"></div>
             </div>
             <div class="right-side w-1/2">
                 <!-- Bloc des graphiques et légendes -->
