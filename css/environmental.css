@@ -1,0 +1,15 @@
+#productionEmissionButton {
+    background-color: #dc05ca;
+}
+
+#productionEmissionButton:is(:hover, .selected) {
+    background-color: #c004b0;
+}
+
+#consumptionEmissionButton {
+    background-color: #0abb07;
+}
+
+#consumptionEmissionButton:is(:hover, .selected) {
+    background-color: #09ae07;
+}
