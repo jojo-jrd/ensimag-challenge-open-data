@@ -1,5 +1,8 @@
+const COLOR_PRODUCTION = "#e7a30c",
+    COLOR_CONSUMPTION = "#ae13bb";
+
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, mode = "PRODUCTION", year = 1961;
+    let dataConsumption, dataProduction, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -69,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
         svg.append("path")
             .datum(dataGrouped)
             .attr("fill", "none")
-            .attr("stroke", d3.color("steelblue"))
+            .attr("stroke", color)
             .attr("stroke-width", 2)
             .attr("d", d3.line()
               .x(d => x(d.year))
@@ -81,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
         svg.append("text")
             .attr("x", width - 80)
             .attr("y", 20)
-            .attr("fill", d3.color("steelblue"))
+            .attr("fill", color)
             .text("TEST");
     }
 
@@ -93,22 +96,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         // TODO: gestion mode + date + noData
 
-        // Récupère les dates en fonction du mode
-        const currentData = mode == "PRODUCTION" ? dataProduction : dataConsumption;
+        // Gère les données et la couleur en fonction du mode
+        let currentData;
+        if (mode == "PRODUCTION") {
+            currentData = dataProduction;
+            color = COLOR_PRODUCTION;
+        } else {
+            currentData = dataConsumption;
+            color = COLOR_CONSUMPTION;
+        }
         // Mets à jour tous les graphiques
         chartMap(currentData);
         chart1(currentData);
+        // TODO other charts
 
         
     }
 
     function initListeners() {
         const dateInput = document.getElementById('dateInput');
+        const selectedYearElem = document.getElementById('selectedYear');
         // Initialise avec la valeur courante
         dateInput.value = year;
-        dateInput.addEventListener("change", function() {
+        dateInput.addEventListener("input", function() {
             // Change l'année
             year = parseInt(this.value);
+            selectedYearElem.textContent = year;
             // Recharge les données
             updateData();
         });

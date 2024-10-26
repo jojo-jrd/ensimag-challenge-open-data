@@ -1,0 +1,48 @@
+/* TODO common */
+
+/* Range input styling */
+.range-input {
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background-color: #ccc;
+    border-radius: 2px;
+    outline: none;
+    margin-top: 5px;
+    margin-bottom: 8px;
+}
+.range-input::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background-color: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.range-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/*
+    CSS FILTERS
+*/
+
+#productionButton {
+    background-color: #e7a30c;
+}
+
+#productionButton:is(:hover, .selected) {
+    background-color: #d0920a;
+}
+
+#consumptionButton {
+    background-color: #ae13bb;
+}
+
+#consumptionButton:is(:hover, .selected) {
+    background-color: #9811a3;
+}

@@ -10,6 +10,8 @@ python3 -m http.server 8000
 
 Puis se connecter à [http:localhost:8000](http:localhost:8000)
 
+Remarque : En développement, il est conseillé d'utiliserla navigation privée pour être sûr que la dernière version des fichiers soit utilisée.
+
 ## Données
 
 Nous partons sur le sujet des viandes dans le monde avec la consommation ainsi que la production et les prix dans le monde. Pour cela, nous allons utiliser plusieurs sources de données : 

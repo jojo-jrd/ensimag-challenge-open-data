@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viande dans le monde</title>
     <link href="./../css/tailwind.css" rel="stylesheet" />
+    <link href="./../css/consumption-production.css" rel="stylesheet" />
+
 
     <script src="./../js/lib/d3.min.js"></script>
 
@@ -48,24 +50,39 @@
     <!-- Section Carte et Graphiques -->
     <div class="section bg-gray-100 p-5">
         <h1 class="text-3xl font-bold mb-4 text-center">Carte et Graphiques</h1>
-        <div class="graph-container flex">
-            <div class="left-side w-3/4 mr-4">
-                <!-- Filtrage et recherche -->
-                <div class="flex justify-between items-center mb-5">
-                    <button id="productionButton" class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Production</button>
-                    <button id="consumptionButton" class="filter-btn bg-gray-600 text-white px-4 py-2 rounded mr-2">Consommation</button>
-                    <input id="dateInput" type="range" min="1961" max="2026"/>
-                    <input type="text" class="search-bar px-3 py-2 border border-gray-300 rounded" placeholder="Rechercher...">
+        <div class="graph-container flex flex-col">
+            <!-- Filtrage et recherche -->
+            <div class="flex justify-between items-center mb-5">
+                <button id="productionButton" class="text-white px-4 py-2 rounded mr-2">Production</button>
+                <button id="consumptionButton" class="text-white px-4 py-2 rounded mr-2">Consommation</button>
+                <!-- Labels for min, selected value, and max -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-500">1961</span>
+                
+                    <!-- Container for range input and dynamic label -->
+                    <div class="flex flex-col items-center range-container">
+                        <span id="selectedYear" class="mb-2 text-sm text-gray-500">1961</span>
+                        <input id="dateInput" type="range" min="1961" max="2026" class="range-input">
+                    </div>
+                
+                    <span class="text-sm text-gray-500">2026</span>
                 </div>
-                <!-- Carte et graphe 1-->
-                <div id="graph-map" class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
-                <div id="graph1" class="graph h-48 bg-gray-200 flex justify-center items-center"></div>
+                <input type="text" class="search-bar px-3 py-2 border border-gray-300 rounded" placeholder="Rechercher...">
             </div>
-            <div class="right-side w-1/2">
-                <!-- Bloc des graphiques et légendes -->
-                <div class="legend h-72 bg-gray-300 mb-5 flex justify-center items-center">Légendes ici</div>
-                <div class="secondary-graph h-64 bg-gray-300 flex justify-center items-center">Deuxième graphique ici</div>
+            <div class="flex">
+                <div class="left-side w-3/4 mr-4">
+                    <!-- Carte et graphe 1-->
+                    <div id="graph-map" class="map h-72 bg-gray-300 mb-5 flex justify-center items-center">Carte ici</div>
+                    <div id="graph1" class="graph h-48 bg-gray-200 flex justify-center items-center"></div>
+                </div>
+                <div class="right-side w-1/4">
+                    <!-- Bloc des graphiques et légendes -->
+                    <div class="legend h-72 bg-gray-300 mb-5 flex justify-center items-center">Légendes ici</div>
+                    <div class="secondary-graph h-64 bg-gray-300 flex justify-center items-center">Deuxième graphique ici</div>
+                </div>
             </div>
+
+            
         </div>
     </div>
     
