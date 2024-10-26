@@ -1,8 +1,9 @@
 const COLOR_PRODUCTION = "#e7a30c",
-    COLOR_CONSUMPTION = "#ae13bb";
+    COLOR_CONSUMPTION = "#ae13bb",
+    COLOR_PRICE = "#45b707";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -24,13 +25,31 @@ document.addEventListener("DOMContentLoaded", () => {
             year : +d["Year"],
             value : +d["Meat, total | 00001765 || Production | 005510 || tonnes"],
         }));
+
+        dataPrice = await d3.csv("./../csv/meat-prices.csv", d => ({
+            month : d["Month"],
+            beef_price : +d["Beef Price"],
+            beef_price_percentage : d["Beef price % Change"] == "NaN" ? NaN : d["Beef price % Change"],
+            chicken_price : +d["Chicken Price"],
+            chicken_price_percentage : d["Chicken price % Change"] == "NaN" ? NaN : d["Chicken price % Change"],
+            lamb_price : +d["Lamb price"],
+            lamb_price_percentage : d["Lamb price % Change"] == "NaN" ? NaN : d["Lamb price % Change"],
+            pork_price : +d["Pork Price"],
+            pork_price_percentage : d["Pork price % Change"] == "NaN" ? NaN : d["Pork price % Change"],
+            salmon_price : +d["Salmon Price"],
+            salmon_price_percentage : d["Salmon price % Change"] == "NaN" ? NaN : d["Salmon price % Change"]
+        }));
     }
 
     function chartMap(data) {
+        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
+
         // TODO
     }
 
     function chart1(data) {
+        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
+
         const svg = d3.select("#graph1")
             .append("svg")
             .attr("width", width + margin.left + margin.right)
@@ -88,9 +107,65 @@ document.addEventListener("DOMContentLoaded", () => {
             .text("TEST");
     }
 
+    function chart2(data) {
+        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
+
+        // Création du graphique
+        const svg = d3.select("#graph2")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+        // Création de l'axe des absisses 
+        const x = d3.scalePoint()
+            .domain(data.map(d => d.month))
+            .range([0, width]);
+
+        // Création de l'axe des ordonnées
+        // TODO: change that
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => Math.max(d.beef_price, d.chicken_price, d.lamb_price, d.pork_price, d.salmon_price))])
+            .range([height, 0]);
+
+        // Création et affichage des axes
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x).tickFormat(d => d.slice(0, 3))); // Format mois abrégé
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        const meats = ["beef_price", "chicken_price", "lamb_price", "pork_price", "salmon_price"];
+        // Récupération des couleurs
+        const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(meats);
+
+        // Création des lignes pour chaque viande
+        meats.forEach(meat => {
+            svg.append("path")
+                .datum(data.filter(d => !isNaN(d[meat])))
+                .attr("fill", "none")
+                .attr("stroke", colors(meat))
+                .attr("stroke-width", 2)
+                .attr("d", d3.line()
+                    .x(d => x(d.month))
+                    .y(d => y(d[meat]))
+                );
+        });
+
+        // Création des légendes
+        meats.forEach((meat, index) => {
+            svg.append("text")
+                .attr("x", width - 80)
+                .attr("y", 20 + index * 20)
+                .attr("fill", colors(meat))
+                .text(meat.replace("_price", "").toUpperCase());
+        });
+    }
+
     function updateData() {
         // Supprime tous les graphiques précédents
-        const allChart = document.querySelectorAll("svg");
+        const allChart = document.querySelectorAll(".section svg");
         for (let chart of allChart) {
             chart.remove();
         }
@@ -101,6 +176,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mode == "PRODUCTION") {
             currentData = dataProduction;
             color = COLOR_PRODUCTION;
+        } else if (mode == "PRICE") {
+            currentData = dataProduction; // TODO change
+            color = COLOR_PRICE;
         } else {
             currentData = dataConsumption;
             color = COLOR_CONSUMPTION;
@@ -108,6 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mets à jour tous les graphiques
         chartMap(currentData);
         chart1(currentData);
+        chart2(dataPrice); // TODO set currentData and change that
         // TODO other charts
 
         
@@ -127,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // AJoute des listeners sur les boutons
-        for (let m of ['consumption', 'production']) {
+        for (let m of ['consumption', 'production', 'price']) {
             document.getElementById(`${m}Button`).addEventListener('click', () => {
                 mode = m.toUpperCase();
                 // Recharge les données

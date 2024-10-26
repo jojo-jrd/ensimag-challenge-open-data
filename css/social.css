@@ -46,3 +46,11 @@
 #consumptionButton:is(:hover, .selected) {
     background-color: #9811a3;
 }
+
+#priceButton {
+    background-color: #45b707;
+}
+
+#priceButton:is(:hover, .selected) {
+    background-color: #3da206;
+}
