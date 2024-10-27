@@ -2,7 +2,7 @@ const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_CONSUMPTION_EMISSION = "#0abb07";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataEmission, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
+    let dataConsumption, dataProduction, dataEmission, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -41,18 +41,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Gère les données et la couleur en fonction du mode
         if (mode == "PRODUCTIONEMISSION") {
-            currentData = dataProduction;
             color = COLOR_PRODUCTION_EMISSION;
         } else {
-            currentData = dataConsumption;
             color = COLOR_CONSUMPTION_EMISSION;
         }
 
         // Mets à jour tous les graphiques
         // TODO charts
-        // TODO faire un produit avec currentData et dataEmission
-
-        
     }
 
     function initListeners() {
@@ -76,10 +71,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateData();
             })
         }
+
+        // Filtre pour les recherches
+        initListenersFilters(
+            document.getElementById("searchInput"),
+            document.getElementById("resultContainer"),
+            dataFilters,
+            filters,
+            updateData
+        );
+    }
+
+    function initFilters() {
+        // TODO see for the filters
     }
 
     async function initPage() {
         await loadData();
+        initFilters();
         initListeners();
         updateData();
     }
