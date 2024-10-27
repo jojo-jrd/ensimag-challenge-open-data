@@ -3,7 +3,7 @@ const COLOR_PRODUCTION = "#e7a30c",
     COLOR_PRICE = "#45b707";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataPrice, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -44,14 +44,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
     }
 
-    function chartMap(data) {
-        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
-
+    function chartMap() {
+        // TODO gestion des données en fonction du mode, des filtres et de l'année
+        let data;
+        if (mode == "PRODUCTION") {
+            data = dataProduction;
+        } else if (mode == "PRICE") {
+            data = dataProduction; // TODO change
+        } else {
+            data = dataConsumption;
+        }        
+        
         // TODO
     }
 
-    function chart1(data) {
-        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
+    function chart1() {
+        // TODO gestion des données en fonction du mode, des filtres et de l'année
+        let data;
+        if (mode == "PRODUCTION") {
+            data = dataProduction;
+        } else if (mode == "PRICE") {
+            data = dataProduction; // TODO change
+        } else {
+            data = dataConsumption;
+        }
 
         const svg = d3.select("#graph1")
             .append("svg")
@@ -110,8 +126,16 @@ document.addEventListener("DOMContentLoaded", () => {
             .text("TEST");
     }
 
-    function chart2(data) {
-        // TODO gestion des données en fonction du mode ici (enlever le paramètre data)
+    function chart2() {
+        // TODO gestion des données en fonction du mode, des filtres et de l'année
+        let data = dataPrice;
+        // if (mode == "PRODUCTION") {
+        //     data = dataProduction;
+        // } else if (mode == "PRICE") {
+        //     data = dataProduction; // TODO change
+        // } else {
+        //     data = dataConsumption;
+        // }
 
         // Création du graphique
         const svg = d3.select("#graph2")
@@ -175,105 +199,38 @@ document.addEventListener("DOMContentLoaded", () => {
         // TODO: gestion mode + date + noData
 
         // Gère les données et la couleur en fonction du mode
-        let currentData;
         if (mode == "PRODUCTION") {
-            currentData = dataProduction;
             color = COLOR_PRODUCTION;
         } else if (mode == "PRICE") {
-            currentData = dataProduction; // TODO change
             color = COLOR_PRICE;
         } else {
-            currentData = dataConsumption;
             color = COLOR_CONSUMPTION;
         }
+
         // Mets à jour tous les graphiques
-        chartMap(currentData);
-        chart1(currentData);
-        chart2(dataPrice); // TODO set currentData and change that
+        chartMap();
+        chart1();
+        chart2();
         // TODO other charts
-
-        
     }
-
-    function initListeners() {
-        const dateInput = document.getElementById('dateInput');
-        const selectedYearElem = document.getElementById('selectedYear');
-        // Initialise avec la valeur courante
-        dateInput.value = year;
-        dateInput.addEventListener("input", function() {
-            // Change l'année
-            year = parseInt(this.value);
-            selectedYearElem.textContent = year;
-            // Recharge les données
-            updateData();
-        });
-
-        // Ajoute des listeners sur les boutons
-        for (let m of ['consumption', 'production', 'price']) {
-            document.getElementById(`${m}Button`).addEventListener('click', () => {
-                mode = m.toUpperCase();
-                // Recharge les données
-                updateData();
-            })
-        }
-
-        // Filtre pour les recherches
-
-        searchInput.addEventListener("focus", () => {
-            resultContainer.classList.remove("hidden");
-            updateResults(searchInput.value.toLowerCase());
-        });
-        
-        searchInput.addEventListener("input", (e) => {
-            updateResults(e.target.value.toLowerCase());
-        });
-        
-        // Masquer le conteneur des résultats lorsqu'on clique à l'extérieur
-        document.addEventListener("click", (e) => {
-            if (!e.target.closest("#searchInput") && !e.target.closest("#resultContainer")) {
-                resultContainer.classList.add("hidden");
-            }
-        });
-    }
-
-    function initFilters() {
-        // TODO see for the filters
-        filters['country'] = [];
-    }
-
-    async function initPage() {
-        await loadData();
-        initListeners();
-        initFilters();
-        updateData();
-    }
-
-    initPage();
 
     /*
-    ==========================================
-    PARTIE DES FILTRES
-    ==========================================
+        ==========================================
+        PARTIE DES FILTRES
+        ==========================================
     */
-
-    // TODO change That
-    const dataRecherche = {
-        country: ["France", "Canada", "Allemagne"],
-        //city: ["Paris", "Montréal", "Berlin"]
-    };
     
-
     // Fonction pour mettre à jour la liste de résultats en fonction de la recherche
     function updateResults(query) {
         resultContainer.innerHTML = ""; // Vider le conteneur de résultats
 
-        for (const [category, items] of Object.entries(dataRecherche)) {
+        for (const [category, items] of Object.entries(dataFilters)) {
             // Filtrer les items par la recherche
             const filteredItems = items.filter(item => item.toLowerCase().includes(query));
 
             if (filteredItems.length) {
                 // Ajouter un séparateur de catégorie si plusieurs categories
-                if (Object.keys(dataRecherche).length >= 2) {
+                if (Object.keys(dataFilters).length >= 2) {
                     const categoryDiv = document.createElement("div");
                     categoryDiv.classList.add("px-3", "py-2", "bg-gray-200", "text-gray-600", "font-semibold");
                     categoryDiv.textContent = category.charAt(0).toUpperCase() + category.slice(1);
@@ -335,5 +292,67 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    /*
+        ==========================================
+        PARTIE DES FONCTIONS D'INITIALISATION
+        ==========================================
+    */
 
+    function initListeners() {
+        const dateInput = document.getElementById('dateInput');
+        const selectedYearElem = document.getElementById('selectedYear');
+        // Initialise avec la valeur courante
+        dateInput.value = year;
+        dateInput.addEventListener("input", function() {
+            // Change l'année
+            year = parseInt(this.value);
+            selectedYearElem.textContent = year;
+            // Recharge les données
+            updateData();
+        });
+
+        // Ajoute des listeners sur les boutons
+        for (let m of ['consumption', 'production', 'price']) {
+            document.getElementById(`${m}Button`).addEventListener('click', () => {
+                mode = m.toUpperCase();
+                // Recharge les données
+                updateData();
+            })
+        }
+
+        // Filtre pour les recherches
+
+        searchInput.addEventListener("focus", () => {
+            resultContainer.classList.remove("hidden");
+            updateResults(searchInput.value.toLowerCase());
+        });
+        
+        searchInput.addEventListener("input", (e) => {
+            updateResults(e.target.value.toLowerCase());
+        });
+        
+        // Masquer le conteneur des résultats lorsqu'on clique à l'extérieur
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest("#searchInput") && !e.target.closest("#resultContainer")) {
+                resultContainer.classList.add("hidden");
+            }
+        });
+    }
+
+    function initFilters() {
+        // TODO see for the others filters
+        filters['country'] = [];
+        const filtersCountries = dataProduction.map(d => d.country);
+        dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index)
+
+    }
+
+    async function initPage() {
+        await loadData();
+        initFilters();
+        initListeners();
+        updateData();
+    }
+
+    initPage();
 });
