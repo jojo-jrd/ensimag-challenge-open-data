@@ -1,5 +1,7 @@
+import {initListenersFilters} from './filters.js'
+
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
-    COLOR_CONSUMPTION_EMISSION = "#0abb07";
+    COLOR_CONSUMPTION_EMISSION = "#4034f8";
 
 document.addEventListener("DOMContentLoaded", () => {
     let dataConsumption, dataProduction, dataEmission, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;

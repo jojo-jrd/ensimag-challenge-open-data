@@ -7,9 +7,9 @@
 }
 
 #consumptionEmissionButton {
-    background-color: #0abb07;
+    background-color: #4034f8;
 }
 
 #consumptionEmissionButton:is(:hover, .selected) {
-    background-color: #09ae07;
+    background-color: #2c1ff8;
 }
