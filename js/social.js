@@ -3,11 +3,14 @@ const COLOR_PRODUCTION = "#e7a30c",
     COLOR_PRICE = "#45b707";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataPrice, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
+
+    const searchInput = document.getElementById("searchInput");
+    const resultContainer = document.getElementById("resultContainer");
 
     async function loadData() {
         // Chargement des données
@@ -205,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updateData();
         });
 
-        // AJoute des listeners sur les boutons
+        // Ajoute des listeners sur les boutons
         for (let m of ['consumption', 'production', 'price']) {
             document.getElementById(`${m}Button`).addEventListener('click', () => {
                 mode = m.toUpperCase();
@@ -213,13 +216,124 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateData();
             })
         }
+
+        // Filtre pour les recherches
+
+        searchInput.addEventListener("focus", () => {
+            resultContainer.classList.remove("hidden");
+            updateResults(searchInput.value.toLowerCase());
+        });
+        
+        searchInput.addEventListener("input", (e) => {
+            updateResults(e.target.value.toLowerCase());
+        });
+        
+        // Masquer le conteneur des résultats lorsqu'on clique à l'extérieur
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest("#searchInput") && !e.target.closest("#resultContainer")) {
+                resultContainer.classList.add("hidden");
+            }
+        });
+    }
+
+    function initFilters() {
+        // TODO see for the filters
+        filters['country'] = [];
     }
 
     async function initPage() {
         await loadData();
         initListeners();
+        initFilters();
         updateData();
     }
 
     initPage();
+
+    /*
+    ==========================================
+    PARTIE DES FILTRES
+    ==========================================
+    */
+
+    // TODO change That
+    const dataRecherche = {
+        country: ["France", "Canada", "Allemagne"],
+        //city: ["Paris", "Montréal", "Berlin"]
+    };
+    
+
+    // Fonction pour mettre à jour la liste de résultats en fonction de la recherche
+    function updateResults(query) {
+        resultContainer.innerHTML = ""; // Vider le conteneur de résultats
+
+        for (const [category, items] of Object.entries(dataRecherche)) {
+            // Filtrer les items par la recherche
+            const filteredItems = items.filter(item => item.toLowerCase().includes(query));
+
+            if (filteredItems.length) {
+                // Ajouter un séparateur de catégorie si plusieurs categories
+                if (Object.keys(dataRecherche).length >= 2) {
+                    const categoryDiv = document.createElement("div");
+                    categoryDiv.classList.add("px-3", "py-2", "bg-gray-200", "text-gray-600", "font-semibold");
+                    categoryDiv.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                    resultContainer.appendChild(categoryDiv);
+                }
+
+                // Ajouter les items de la catégorie
+                filteredItems.forEach((item, index) => {
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `${category}-${index}`;
+                    checkbox.value = item;
+                    checkbox.classList.add("mr-2");
+
+                    // Cocher les cases des éléments déjà sélectionnés
+                    if (filters[category].includes(item)) checkbox.checked = true;
+
+                    checkbox.addEventListener("change", (e) => {
+                        if (e.target.checked) {
+                            addFilterItem(category, item);
+                        } else {
+                            removeFilterItem(category, item);
+                        }
+                    });
+
+                    const label = document.createElement("label");
+                    label.htmlFor = `${category}-${index}`;
+                    label.textContent = item;
+
+                    const itemDiv = document.createElement("div");
+                    itemDiv.classList.add("px-3", "py-2", "hover:bg-gray-100", "flex", "items-center");
+                    itemDiv.appendChild(checkbox);
+                    itemDiv.appendChild(label);
+
+                    resultContainer.appendChild(itemDiv);
+                });
+            }
+        }
+    }
+
+    // Fonction pour ajouter un élément sélectionné à la liste
+    function addFilterItem(category, item) {
+        const listFilters = filters[category];
+        if (!listFilters.includes(item)) {
+            listFilters.push(item);
+            // Relance l'affichage des graphiques
+            updateData();
+        }
+    }
+
+    // Fonction pour retirer un élément sélectionné de la liste
+    function removeFilterItem(category, item) {
+        const listFilters = filters[category];
+        const index = listFilters.indexOf(item);
+        if (index > -1) {
+            listFilters.splice(index, 1);
+            // Relance l'affichage des graphiques
+            updateData();
+        }
+    }
+
+
 });
