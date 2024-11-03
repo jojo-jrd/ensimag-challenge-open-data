@@ -49,12 +49,91 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mode == "PRODUCTION") {
             data = dataProduction;
         } else if (mode == "PRICE") {
-            data = dataProduction; // TODO change
+            data = dataPrice;
         } else {
             data = dataConsumption;
         }        
+
+        const svg = d3.select("#graph-map")
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", height + 200);
+    
+        const projection = d3.geoMercator()
+            .scale(150)
+            .translate([width / 1.54, height / 1]);
         
-        // TODO
+        // Configuration du tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("padding", "5px 10px")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "5px")
+            .style("pointer-events", "none")
+            .style("opacity", 0);
+        
+        // Configuration du zoom
+        const zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .on("zoom", (event) => {
+                svg.selectAll("path").attr("transform", event.transform);
+            });
+        
+        d3.select("#resetZoom").on("click", () => {
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity);
+        });
+        
+        const path = d3.geoPath().projection(projection);
+        svg.call(zoom);
+        
+        // Chargement des données géographiques
+        d3.json("./../countries.geo.json").then((geoData) => {
+            const countries = svg.selectAll("path")
+                .data(geoData.features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("fill", "#ccc") // Couleur par défaut
+                .attr("stroke", "#333") // Couleur de la bordure
+                .attr("stroke-width", 0.5)
+                .on("mouseover", handleMouseOver)
+                .on("mousemove", handleMouseMove)
+                .on("mouseout", handleMouseOut);
+        });
+        
+        // Fonction de gestion de la souris sur le pays
+        function handleMouseOver(event, d) {
+            if (d.id !== "BMU") {
+                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                const avgConsumption = consumptionData.length > 0 
+                    ? d3.mean(consumptionData, dp => dp.value) 
+                    : "Donnée indisponible";
+        
+                d3.select(this).attr("fill", "#003366");
+                tooltip.style("opacity", 1)
+                    .html(`<strong>${d.properties.name}</strong>
+                        <br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}
+                        <br>Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`);
+            }
+        }
+        
+        // Fonction de gestion du mouvement de la souris pour le tooltip
+        function handleMouseMove(event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
+        }
+        
+        // Fonction de gestion de la sortie de la souris
+        function handleMouseOut() {
+            d3.select(this).attr("fill", "#ccc");
+            tooltip.style("opacity", 0);
+        }
+    
     }
 
     function chart1() {
