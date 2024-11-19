@@ -1,4 +1,4 @@
-import {initListenersFilters} from './filters.js'
+import {initListenersFilters, initFilters} from './filters.js'
 
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_CONSUMPTION_EMISSION = "#4034f8";
@@ -29,7 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dataEmission = await d3.csv("./../csv/meat-emissions.csv", d => ({
             product : d["Food product"],
-            // TODO other columns
+            total_from_land_to_retail : +d["Total from Land to Retail"],
+            total_average : +d["Total Global Average GHG Emissions per kg"],
+            unit : d["Unit of GHG Emissions"]
         }));
     }
 
@@ -39,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let chart of allChart) {
             chart.remove();
         }
-        // TODO: gestion mode + date + noData
 
         // Gère les données et la couleur en fonction du mode
         if (mode == "PRODUCTIONEMISSION") {
@@ -84,16 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    function initFilters() {
-        // TODO see for the filters
-        filters['country'] = [];
-        const filtersCountries = dataProduction.map(d => d.country).sort();
-        dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index);
-    }
-
     async function initPage() {
         await loadData();
-        initFilters();
+        initFilters(dataFilters, filters, dataConsumption, dataProduction);
         initListeners();
         updateData();
     }

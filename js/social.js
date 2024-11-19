@@ -1,4 +1,4 @@
-import {initListenersFilters} from './filters.js'
+import {initListenersFilters, initFilters} from './filters.js'
 
 const COLOR_PRODUCTION = "#e7a30c",
     COLOR_CONSUMPTION = "#ae13bb",
@@ -329,16 +329,11 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    function initFilters() {
-        // TODO see for the others filters
-        filters['country'] = [];
-        const filtersCountries = dataProduction.map(d => d.country).sort();
-        dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index);
-    }
+    
 
     async function initPage() {
         await loadData();
-        initFilters();
+        initFilters(dataFilters, filters, dataConsumption, dataProduction);
         initListeners();
         updateData();
     }
