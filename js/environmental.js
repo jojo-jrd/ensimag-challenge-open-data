@@ -86,6 +86,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initFilters() {
         // TODO see for the filters
+        filters['country'] = [];
+        const filtersCountries = dataProduction.map(d => d.country).sort();
+        dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index);
     }
 
     async function initPage() {
