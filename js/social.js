@@ -43,8 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
     }
 
+    let colorScale;
+    let valueAccessor;
     function chartMap() {
-        // TODO gestion des données en fonction du mode, des filtres et de l'année
         let data;
         if (mode == "PRODUCTION") {
             data = dataProduction;
@@ -52,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data = dataPrice;
         } else {
             data = dataConsumption;
-        }        
+        }
 
         const svg = d3.select("#graph-map")
         .append("svg")
@@ -63,7 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .scale(150)
             .translate([width / 1.54, height / 1]);
         
-        // Configuration du tooltip
         const tooltip = d3.select("body")
             .append("div")
             .style("position", "absolute")
@@ -73,68 +73,126 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("border-radius", "5px")
             .style("pointer-events", "none")
             .style("opacity", 0);
-        
-        // Configuration du zoom
-        const zoom = d3.zoom()
-            .scaleExtent([1, 8])
-            .on("zoom", (event) => {
-                svg.selectAll("path").attr("transform", event.transform);
-            });
-        
-        d3.select("#resetZoom").on("click", () => {
-            svg.transition()
-                .duration(750)
-                .call(zoom.transform, d3.zoomIdentity);
-        });
-        
+    
         const path = d3.geoPath().projection(projection);
-        svg.call(zoom);
         
-        // Chargement des données géographiques
         d3.json("./../countries.geo.json").then((geoData) => {
-            const countries = svg.selectAll("path")
+            valueAccessor = (d) => {
+                if (mode == "PRODUCTION") {
+                    const productionData = data.find(dp => dp.code === d.id && dp.year == year);
+                    return productionData ? productionData.value : 0;
+                } else if (mode == "CONSUMPTION") {
+                    const consumptionData = data.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                    return consumptionData.length > 0 ? d3.mean(consumptionData, dp => dp.value) : 0;
+                } else if (mode == "PRICE") {
+                    const priceData = data.find(dp => dp.code === d.id && dp.year == year);
+                    return priceData ? priceData.value : 0;
+                }
+                return 0;
+            };
+
+            colorScale = d3.scaleSequential(d3.interpolateRgb("#005f73", "#0a9396"))
+                .domain([0.2, d3.max(geoData.features, (d) => valueAccessor(d))]);
+
+            svg.selectAll("path")
                 .data(geoData.features)
                 .enter()
                 .append("path")
                 .attr("d", path)
-                .attr("fill", "#ccc") // Couleur par défaut
-                .attr("stroke", "#333") // Couleur de la bordure
+                .attr("fill", "#ccc")
+                .attr("stroke", "#333")
                 .attr("stroke-width", 0.5)
                 .on("mouseover", handleMouseOver)
                 .on("mousemove", handleMouseMove)
                 .on("mouseout", handleMouseOut);
+
+            addColorLegend(svg, colorScale);
         });
+
+        function addColorLegend(svg, colorScale) {
+            const legendWidth = 200;
+            const legendHeight = 20;
+
+            const legendGroup = svg.append("g")
+                .attr("transform", `translate(${width - legendWidth + 100}, ${height + 150})`);
+            
+            const gradient = svg.append("defs")
+                .append("linearGradient")
+                .attr("id", "blue-gradient")
+                .attr("x1", "0%")
+                .attr("x2", "100%")
+                .attr("y1", "0%")
+                .attr("y2", "0%");
         
-        // Fonction de gestion de la souris sur le pays
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", "#0a9396");
+        
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", "#005f73"); 
+     
+            legendGroup.append("rect")
+                .attr("width", legendWidth)
+                .attr("height", legendHeight)
+                .style("fill", "url(#blue-gradient)");
+        
+            legendGroup.append("text")
+                .attr("x", 0)
+                .attr("y", legendHeight + 5)
+                .attr("text-anchor", "start")
+                .style("font-size", "12px")
+                .text(d3.format(".0f")(0));
+        
+            legendGroup.append("text")
+                .attr("x", legendWidth)
+                .attr("y", legendHeight + 5)
+                .attr("text-anchor", "end")
+                .style("font-size", "12px")
+                .text(d3.format(",.0f")(d3.max(svg.selectAll("path").data(), (d) => valueAccessor(d)))
+                    .replace(/,/g, ' '));
+        }        
+        
         function handleMouseOver(event, d) {
             if (d.id !== "BMU") {
-                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                const avgConsumption = consumptionData.length > 0 
-                    ? d3.mean(consumptionData, dp => dp.value) 
-                    : "Donnée indisponible";
-        
-                d3.select(this).attr("fill", "#003366");
+                let infoHTML = `<strong>${d.properties.name}</strong>`;
+            
+                if (mode == "PRODUCTION") {
+                    const productionData = data.find(dp => dp.code === d.id && dp.year == year);
+                    infoHTML += `<br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}`;
+                }
+  
+                if (mode == "CONSUMPTION") {
+                    const consumptionData = data.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                    const avgConsumption = consumptionData.length > 0 
+                        ? d3.mean(consumptionData, dp => dp.value) 
+                        : "Donnée indisponible";
+                    infoHTML += `<br>Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`;
+                }
+            
+                if (mode == "PRICE") {
+                    const priceData = data.find(dp => dp.code === d.id && dp.year == year);
+                    infoHTML += `<br>Prix : ${priceData ? priceData.value.toLocaleString() + " €/tonne" : "Donnée indisponible"}`;
+                }
+            
                 tooltip.style("opacity", 1)
-                    .html(`<strong>${d.properties.name}</strong>
-                        <br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}
-                        <br>Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`);
+                    .html(infoHTML);
+            
+                d3.select(this).attr("fill", (d) => colorScale(valueAccessor(d)) || "#003366");
             }
         }
         
-        // Fonction de gestion du mouvement de la souris pour le tooltip
         function handleMouseMove(event) {
             tooltip.style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
         }
         
-        // Fonction de gestion de la sortie de la souris
         function handleMouseOut() {
             d3.select(this).attr("fill", "#ccc");
             tooltip.style("opacity", 0);
         }
-    
     }
+    
 
     function chart1() {
         // TODO gestion des données en fonction du mode, des filtres et de l'année
