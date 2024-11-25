@@ -47,10 +47,10 @@ document.addEventListener("DOMContentLoaded", () => {
     */
 
     function valueAccessor(d) {
-        // TODO LOAD DYNAMICALLY
-        let total_production = 16.50;
-        let total_average = 27.09;
+        let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
+        let total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
         let total_consumption = total_average-total_production;
+
         if (mode == "PRODUCTIONEMISSION") {
             const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
             return productionData? (productionData.value)*total_production : 0;
@@ -183,13 +183,23 @@ document.addEventListener("DOMContentLoaded", () => {
     
         const path = d3.geoPath().projection(projection);
 
+        const getColorRangeForMode = (mode) => {
+            if (mode === "PRODUCTIONEMISSION") {
+                return [
+                    "#f7b3d6", "#f286c1", "#e35aa5", "#d32d89", "#dc05ca",
+                    "#b900a4", "#8f007f", "#66005a", "#3d0035"
+                ];
+            } else {
+                return [
+                    "#a09cf7", "#7a79f1", "#5556ea", "#3133e4", "#4034f8",
+                    "#2c2bcb", "#191a9e", "#14147b", "#0e1f9d"
+                ];
+            }
+        };
+
         const colorScale = d3.scaleQuantile()
-        .domain([0, d3.max(geoData.features, (d) => valueAccessor(d))])
-        .range([
-            "#00a89b", "#00988a", "#00877a", "#00766a", "#00655a",
-            "#00544a", "#004439", "#003428", "#002317" 
-        ]);
-        // TODO color
+            .domain([0, d3.max(geoData.features, valueAccessor)])
+            .range(getColorRangeForMode(mode));
 
         const countriesFilters = filters["country"].map(countryToCodeMapping);
         svg.selectAll("path")
