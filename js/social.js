@@ -268,6 +268,109 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function chartPie() {    
+        // Filtrer par rapport à l'année choisie, exclure les lignes ne correspondant pas à des pays
+        const productionDataForYear = dataProduction
+            .filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country));
+        const consumptionDataForYear = dataConsumption
+            .filter(d => d.year === year && d.measure === "THND_TONNE");
+    
+        // Aggréger les données par pays
+        const aggregatedData = productionDataForYear.map(d => {
+            const consumption = consumptionDataForYear.find(c => c.location === d.code); // match le code du pays
+            return {
+                country: d.country,
+                value: mode === "PRODUCTION" ? d.value : (consumption ? consumption.value : 0)
+            };
+        }).filter(d => d.value > 0); // Filtrer les valeurs nulles
+    
+        // Top 10 (9 pays et le reste du monde cumulé)
+        const sortedData = aggregatedData.sort((a, b) => b.value - a.value);
+        const topData = sortedData.slice(0, 9);
+        const otherDataValue = sortedData.slice(9).reduce((acc, curr) => acc + curr.value, 0);
+        if (otherDataValue > 0) {
+            topData.push({ country: "Other", value: otherDataValue });
+        }
+    
+        // Calcul du total 
+        const totalValue = topData.reduce((acc, d) => acc + d.value, 0);
+    
+        // Remove piechart
+        d3.select("#pieChart").selectAll("*").remove();
+    
+        // Dimensions 
+        const width = 500;
+        const height = 500;
+        const radius = Math.min(width, height) / 2;
+    
+        const svg = d3.select("#pieChart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
+    
+        // Couleurs 
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+    
+        // Tooltip setup
+        const tooltip = d3.select("body").append("div")
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("padding", "5px 10px")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "5px")
+            .style("pointer-events", "none")
+            .style("opacity", 0);
+    
+        // Création du camembert et le générateur d'arcs
+        const pie = d3.pie().value(d => d.value);
+        const arc = d3.arc().innerRadius(0).outerRadius(radius);
+    
+        // dessin des arcs 
+        const arcs = svg.selectAll("arc")
+            .data(pie(topData))
+            .enter()
+            .append("g")
+            .attr("class", "arc")
+            .on("mouseover", function(event, d) {
+                // Create a new tooltip on hover
+                const tooltip = d3.select("body").append("div")
+                    .attr("class", "tooltip") 
+                    .style("position", "absolute")
+                    .style("background-color", "white")
+                    .style("padding", "5px 10px")
+                    .style("border", "1px solid #ccc")
+                    .style("border-radius", "5px")
+                    .style("pointer-events", "none")
+                    .style("opacity", 1)
+                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
+            })
+            .on("mousemove", function(event) {
+                d3.select(".tooltip")
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 20) + "px");
+            })
+            .on("mouseout", function() {
+                // remove tooltip
+                d3.select(".tooltip").remove();
+            });
+    
+        // ajout des arcs colorés
+        arcs.append("path")
+            .attr("d", arc)
+            .attr("fill", d => color(d.data.country));
+    
+        // reset
+        svg.on("mouseleave", () => d3.select(".tooltip").remove());
+    }
+    
+    // fonction pour exclure les regroupements
+    function isRegionOrGlobal(name) {
+        const regionKeywords = ["Europe", "World", "America", "Africa", "Asia", "FAO"];
+        return regionKeywords.some(keyword => name.includes(keyword));
+    }
+
     function updateData() {
         // Supprime tous les graphiques précédents
         const allChart = document.querySelectorAll(".section svg");
@@ -288,6 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
         chartMap();
         chart1();
         chart2();
+        chartPie();
         // TODO other charts
     }
 
