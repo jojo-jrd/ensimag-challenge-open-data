@@ -59,56 +59,74 @@ document.addEventListener("DOMContentLoaded", () => {
         let total_consumption = total_average-total_production;
 
         if (mode == "PRODUCTIONEMISSION") {
-            const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-            return productionData? (productionData.value)*total_production : 0;
+            const selectedMeats = filters["meat"] || [];
+            let consumptionData = dataConsumption.filter(dp => 
+                dp.location === d.id && 
+                dp.year == year && 
+                dp.measure === "THND_TONNE" &&
+                selectedMeats.includes(dp.type_meat)
+            );
+    
+            if (selectedMeats.length === 0) {
+                consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+            }
+    
+            return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : 0;
         } else {
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-            return consumptionData.length > 0 ? d3.mean(consumptionData, dp => dp.value)*total_consumption : 0;
+            return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value)*total_consumption : 0;
         }
     };
 
     let tooltipChart;
-    function addColorLegend(svg, colorScale) {
-        const legendWidth = 200;
-        const legendHeight = 20;
-
+    function addColorLegend(svg, colorScale, width, height) {
+        const legendWidth = Math.min(150, width * 0.25); 
+        const legendHeight = 15;
+        const paddingRight = Math.min(40, width * 0.05); 
+        const paddingBottom = Math.min(20, height * 0.05); 
+    
         const legendGroup = svg.append("g")
-            .attr("transform", `translate(${width - legendWidth + 80}, ${height + 150})`);
-        
+            .attr(
+                "transform",
+                `translate(${width - legendWidth - paddingRight}, ${height - legendHeight - paddingBottom})`
+            );
+    
         const gradient = svg.append("defs")
             .append("linearGradient")
-            .attr("id", "blue-gradient")
+            .attr("id", "color-gradient")
             .attr("x1", "0%")
             .attr("x2", "100%")
             .attr("y1", "0%")
             .attr("y2", "0%");
-
+    
         const colorRange = colorScale.range();
         colorRange.forEach((color, index) => {
             gradient.append("stop")
                 .attr("offset", `${(index / (colorRange.length - 1)) * 100}%`)
-                .attr("stop-color", color); 
+                .attr("stop-color", color);
         });
-
+    
         legendGroup.append("rect")
             .attr("width", legendWidth)
             .attr("height", legendHeight)
-            .style("fill", "url(#blue-gradient)");
-        
-        const numTicks = 3;
-        const tickValues = d3.range(0, numTicks).map(i => d3.quantile(colorScale.domain(), i / (numTicks - 1)));
-        
+            .style("fill", "url(#color-gradient)");
+    
+        const numTicks = width < 500 ? 2 : 3; 
+        const tickValues = d3.range(0, numTicks).map(i =>
+            d3.quantile(colorScale.domain(), i / (numTicks - 1))
+        );
+    
         legendGroup.selectAll(".legend-tick")
             .data(tickValues)
             .enter()
             .append("text")
             .attr("class", "legend-tick")
-            .attr("x", (d, i) => i * (legendWidth / (numTicks - 1)))
-            .attr("y", legendHeight + 15)
+            .attr("x", (d, i) => i * (legendWidth / (numTicks - 1))) 
+            .attr("y", legendHeight + 12) 
             .attr("text-anchor", "middle")
-            .style("font-size", "10px")
-            .text(d => d3.format(",.0f")(d)); 
-    }        
+            .style("font-size", `${Math.max(8, width * 0.015)}px`) 
+            .text(d => d3.format(",.0f")(d));
+    }
     
     function handleMouseOver(event, d) {
         // TODO LOAD DYNAMICALLY
@@ -122,11 +140,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
                 infoHTML += `<br>C02/Production : ${productionData ? ((productionData.value) * total_production).toLocaleString() + " tonnes" : "Donnée indisponible"}`;
             } else {
-                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                const avgConsumption = consumptionData.length > 0 
-                    ? d3.mean(consumptionData, dp => dp.value)*total_consumption
-                    : "Donnée indisponible";
-                infoHTML += `<br>C02/Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`;
+                const selectedMeats = filters["meat"] || [];
+                let consumptionData = dataConsumption.filter(dp => 
+                    dp.location === d.id && 
+                    dp.year == year && 
+                    dp.measure === "THND_TONNE" &&
+                    selectedMeats.includes(dp.type_meat)
+                );
+        
+                if (selectedMeats.length === 0) {
+                    consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                }
+                const sumConsumption = consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : "Donnée indisponible";
+                infoHTML += `<br>Consommation : ${sumConsumption !== "Donnée indisponible" ? sumConsumption.toLocaleString() + " tonnes" : sumConsumption}`;
             }
         
             tooltipChart.style("opacity", 1)
@@ -167,79 +193,90 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function chartMap() {
-        const svg = d3.select("#graph-map")
-            .append("svg")
-            .attr("width", "100%")
-            .attr("height", height + 200);
+        const container = d3.select("#graph-map");
     
-        const projection = d3.geoMercator()
-            .scale(150)
-            .translate([width / 1.54, height / 1]);
-        
-        if (tooltipChart) tooltipChart.remove();
-
-        tooltipChart = d3.select("body")
-            .append("div")
-            .style("position", "absolute")
-            .style("background-color", "white")
-            .style("padding", "5px 10px")
-            .style("border", "1px solid #ccc")
-            .style("border-radius", "5px")
-            .style("pointer-events", "none")
-            .style("opacity", 0);
+        function drawMap() {
+            container.select("svg").remove();
     
-        const path = d3.geoPath().projection(projection);
-
-        const getColorRangeForMode = (mode) => {
-            if (mode === "PRODUCTIONEMISSION") {
-                return [
-                    "#f7b3d6", "#f286c1", "#e35aa5", "#d32d89", "#dc05ca",
-                    "#b900a4", "#8f007f", "#66005a", "#3d0035"
-                ];
-            } else {
-                return [
-                    "#a09cf7", "#7a79f1", "#5556ea", "#3133e4", "#4034f8",
-                    "#2c2bcb", "#191a9e", "#14147b", "#0e1f9d"
-                ];
-            }
-        };
-
-        const colorScale = d3.scaleQuantile()
-            .domain([0, d3.max(geoData.features, valueAccessor)])
-            .range(getColorRangeForMode(mode));
-
-        const countriesFilters = filters["country"].map(countryToCodeMapping);
-        svg.selectAll("path")
-            .data(geoData.features)
-            .enter()
-            .append("path")
-            .attr("d", path)
-            .attr("fill", (d) => {
-                const value = valueAccessor(d);
-                return value ? colorScale(value) : "#ccc";
-            })
-            .attr("stroke", "#333")
-            .attr("stroke-width", d => countriesFilters.includes(d.id) ? 2 : 0.5) // Bordure différente pour les pays sélectionnés
-            .on("mouseover", handleMouseOver)
-            .on("mousemove", handleMouseMove)
-            .on("mouseout", handleMouseOut)
-            .on("click", handleClick); // Ajouter l'événement de clic ici
-
-        addColorLegend(svg, colorScale);  
-    }
+            const svgwidth = container.node().getBoundingClientRect().width;
+            const isMobile = svgwidth < 768; // Déterminer si on est sur mobile
+            const svgheight = svgwidth * (isMobile ? 0.8 : 0.6); // Ratio différent pour mobile et desktop
+    
+            const svg = container
+                .append("svg")
+                .attr("width", svgwidth)
+                .attr("height", svgheight);
+    
+            const projection = d3.geoMercator()
+                .scale(svgwidth / 6)
+                .translate([svgwidth / 2, svgheight / 1.5]);
+    
+            if (tooltipChart) tooltipChart.remove();
+    
+            tooltipChart = d3.select("body")
+                .append("div")
+                .style("position", "absolute")
+                .style("background-color", "white")
+                .style("padding", "5px 10px")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "5px")
+                .style("pointer-events", "none")
+                .style("opacity", 0);
+    
+            const path = d3.geoPath().projection(projection);
+    
+            const getColorRange = (mode) => {
+                if (mode === "PRODUCTIONEMISSION") {
+                    return [
+                        "#f7b3d6", "#f286c1", "#e35aa5", "#d32d89", "#dc05ca",
+                        "#b900a4", "#8f007f", "#66005a", "#3d0035"
+                    ];
+                } else {
+                    return [
+                        "#a09cf7", "#7a79f1", "#5556ea", "#3133e4", "#4034f8",
+                        "#2c2bcb", "#191a9e", "#14147b", "#0e1f9d"
+                    ];
+                }
+            };
+    
+            const colorScale = d3.scaleQuantile()
+                .domain([0, d3.max(geoData.features, valueAccessor)])
+                .range(getColorRange(mode));
+    
+            const countriesFilters = filters["country"].map(countryToCodeMapping);
+    
+            svg.selectAll("path")
+                .data(geoData.features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("fill", (d) => {
+                    const value = valueAccessor(d);
+                    return value ? colorScale(value) : "#ccc";
+                })
+                .attr("stroke", "#333")
+                .attr("stroke-width", d => countriesFilters.includes(d.id) ? 2 : 0.5)
+                .on("mouseover", handleMouseOver)
+                .on("mousemove", handleMouseMove)
+                .on("mouseout", handleMouseOut)
+                .on("click", handleClick);
+    
+            addColorLegend(svg, colorScale, svgwidth, svgheight);
+        }
+        drawMap();
+        window.addEventListener("resize", drawMap);
+    }    
     
     function chart1() {
         // Récupérer le pays sélectionné
         const country = getLastCountryAdded();
         if (!country) {
-            console.log("No country selected");
             return;
         }
 
         // Récupérer la/les viande(s)
         let meat = getSelectedMeat();
         if(meat == null) {
-            console.log(`No meat selected`);
             meat = dataEmission.map(e => e.product.toLowerCase()); // Default
         }
     
