@@ -514,10 +514,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function chartPie() {
+        console.log("mode", mode)
         // Gestion du dataset selon le mode
         const dataForYear = mode === "PRODUCTION"
             ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
             : dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE");
+
+        console.log("dataForYear", dataForYear);
     
         if (!dataForYear || dataForYear.length === 0) {
             console.error("No data available for the selected mode and year.");
@@ -525,7 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
     
-        // aggrégation par pays
+        // Aggrégation par pays
         const aggregatedData = d3.groups(dataForYear, d => d.country || d.location)
             .map(([country, entries]) => ({
                 country,
@@ -534,19 +537,21 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(d => d.value > 0)
             .sort((a, b) => b.value - a.value);
     
-        // TOP 10 (9 pays, + Other -cumul des autres pays-)
+        // TOP 10 (9 pays, 1 Other -cumul des autres pays-)
         const topCountries = aggregatedData.slice(0, 9);
         const otherValue = aggregatedData.slice(9).reduce((sum, d) => sum + d.value, 0);
         if (otherValue > 0) {
             topCountries.push({ country: "Other", value: otherValue });
         }
     
+        // Total
         const totalValue = d3.sum(topCountries, d => d.value);
     
-        // Container
+        // Reset 
         const container = d3.select("#pieChart");
         container.html("");
     
+        // Node
         const containerNode = container.node();
         if (!containerNode) {
             console.error("Container with id 'pieChart' not found.");
@@ -554,26 +559,36 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     
         // Dimensions
-        const containerWidth = containerNode.getBoundingClientRect().width || 800;
-        const containerHeight = containerNode.getBoundingClientRect().height || 400; 
-        console.log("svgWidth", containerWidth);
-        console.log("svgHeight", containerHeight);
-    
-        const svgWidth = containerWidth * 0.9;
-        const svgHeight = containerHeight * 0.9;
+        const containerWidth = containerNode.getBoundingClientRect().width || 800; // Default width
+        const containerHeight = containerNode.getBoundingClientRect().height || 400; // Default height
+        const svgWidth = containerWidth * 0.95; 
+        const svgHeight = containerHeight * 0.95;
         const radius = Math.min(svgWidth, svgHeight) / 3;
-        console.log("radius", radius);
     
         if (containerWidth === 0 || containerHeight === 0) {
             console.error("Invalid container dimensions.");
             return;
         }
     
+        // Create SVG 
         const svg = container.append("svg")
             .attr("width", svgWidth)
-            .attr("height", svgHeight)
-            .append("g")
-            .attr("transform", `translate(${svgWidth / 2}, ${svgHeight / 2})`);
+            .attr("height", svgHeight + 40); // Add extra height for the title
+    
+        // Titre
+        const chartTitle = `${mode === "PRODUCTION" ? "Production" : "Consumption"} Distribution (${year})`;
+        svg.append("text")
+            .attr("x", svgWidth / 2)
+            .attr("y", 20) // Position title at the top
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("font-family", "Arial, sans-serif")
+            .text(chartTitle);
+    
+        // Chart group 
+        const chartGroup = svg.append("g")
+            .attr("transform", `translate(${svgWidth / 2}, ${(svgHeight / 2) + 20})`);
     
         // Couleurs
         const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -593,7 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const arc = d3.arc().innerRadius(0).outerRadius(radius);
     
         // Arcs
-        const arcs = svg.selectAll(".arc")
+        const arcs = chartGroup.selectAll(".arc")
             .data(pie(topCountries))
             .enter()
             .append("g")
@@ -614,10 +629,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("d", arc)
             .attr("fill", d => color(d.data.country));
     
-        const legendContainer = svg.append("g")
+        // Légende
+        const legendContainer = chartGroup.append("g")
             .attr("transform", `translate(${radius + 50}, ${-radius})`);
     
-        // Légende
         const legend = legendContainer.selectAll(".legend")
             .data(topCountries)
             .enter()
@@ -638,7 +653,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("font-size", "12px")
             .style("font-family", "Arial, sans-serif")
             .text(d => `${d.country}`);
-    }
+    }    
     
     
     // fonction pour exclure les regroupements
