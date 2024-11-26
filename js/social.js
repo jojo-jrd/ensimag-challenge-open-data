@@ -275,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const country = getLastCountryAdded();
         if(country == null) {
             console.log('No country selected');
+            d3.select("#graph1").html("Select a country");
             return;
         }
         // Code du pays
@@ -307,11 +308,31 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remove 
         d3.select("#graph1").selectAll("*").remove();
 
+        // Tooltip setup
+        const tooltip = d3.select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "5px")
+            .style("padding", "8px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("font-size", "12px");
+
         // SVG container
-        const svg = d3.select("#graph1")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
+        const container = d3.select("#graph1");
+        container.html("");
+        const containerNode = container.node();
+        const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
+
+        const margin = { top: 50, right: 20, bottom: 70, left: 70 };
+        const width = containerWidth - margin.left - margin.right;
+        const height = containerHeight - margin.top - margin.bottom;
+
+        const svg = container.append("svg")
+            .attr("width", containerWidth)
+            .attr("height", containerHeight)
             .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
@@ -322,27 +343,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const y = d3.scaleLinear()
             .domain([0, d3.max(dataGrouped, d => d.value)])
+            .nice()
             .range([height, 0]);
 
         // Ajout des axes
-        // Rota 45°
         svg.append("g")
-        .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .attr("transform", "rotate(-45)") // Rotattion 45°
-        .style("text-anchor", "end"); 
-        
-        // Tous les 5 ans   
-        // svg.append("g")
-        // .attr("transform", `translate(0, ${height})`)
-        // .call(
-        //     d3.axisBottom(x)
-        //         .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
-        // );
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x).tickValues(dataGrouped.map((d, i) => (i % 5 === 0 ? d.year : null)).filter(d => d)))
+            .selectAll("text")
+            .style("text-anchor", "end");
 
         svg.append("g")
-            .call(d3.axisLeft(y));
+            .call(d3.axisLeft(y).ticks(6).tickFormat(d3.format(".2s")));
 
         // Create the line generator
         const line = d3.line()
@@ -365,9 +377,20 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("cx", d => x(d.year))
             .attr("cy", d => y(d.value))
             .attr("r", 4)
-            .attr("fill", color);
+            .attr("fill", color)
+            .on("mouseover", (event, d) => {
+                tooltip.style("opacity", 1)
+                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+            })
+            .on("mousemove", (event) => {
+                tooltip.style("left", `${event.pageX + 10}px`)
+                    .style("top", `${event.pageY - 20}px`);
+            })
+            .on("mouseout", () => {
+                tooltip.style("opacity", 0);
+            });
 
-        // Add a legend or title
+        // Title
         svg.append("text")
             .attr("x", width / 2)
             .attr("y", -10)
@@ -376,6 +399,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("font-weight", "bold")
             .text(`${mode === "PRODUCTION" ? "Production" : "Consumption"} Trends for ${country}`);
 
+        // Hide tooltip when leaving the container
+        container.on("mouseleave", () => tooltip.style("opacity", 0));
     }
 
     // Récupérer le dernier pays sélectionné
@@ -450,102 +475,133 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function chartPie() {    
-        // Filtrer par rapport à l'année choisie, exclure les lignes ne correspondant pas à des pays
-        const productionDataForYear = dataProduction
-            .filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country));
-        const consumptionDataForYear = dataConsumption
-            .filter(d => d.year === year && d.measure === "THND_TONNE");
+    function chartPie() {
+        // Gestion du dataset selon le mode
+        const dataForYear = mode === "PRODUCTION"
+            ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
+            : dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE");
     
-        // Aggréger les données par pays
-        const aggregatedData = productionDataForYear.map(d => {
-            const consumption = consumptionDataForYear.find(c => c.location === d.code); // match le code du pays
-            return {
-                country: d.country,
-                value: mode === "PRODUCTION" ? d.value : (consumption ? consumption.value*1000 : 0)
-            };
-        }).filter(d => d.value > 0); // Filtrer les valeurs nulles
-    
-        // Top 10 (9 pays et le reste du monde cumulé)
-        const sortedData = aggregatedData.sort((a, b) => b.value - a.value);
-        const topData = sortedData.slice(0, 9);
-        const otherDataValue = sortedData.slice(9).reduce((acc, curr) => acc + curr.value, 0);
-        if (otherDataValue > 0) {
-            topData.push({ country: "Other", value: otherDataValue });
+        if (!dataForYear || dataForYear.length === 0) {
+            console.error("No data available for the selected mode and year.");
+            d3.select("#pieChart").html("No data available for the selected mode and year");
+            return;
         }
     
-        // Calcul du total 
-        const totalValue = topData.reduce((acc, d) => acc + d.value, 0);
+        // aggrégation par pays
+        const aggregatedData = d3.groups(dataForYear, d => d.country || d.location)
+            .map(([country, entries]) => ({
+                country,
+                value: d3.sum(entries, d => d.value)
+            }))
+            .filter(d => d.value > 0)
+            .sort((a, b) => b.value - a.value);
     
-        // Remove piechart
-        d3.select("#pieChart").selectAll("*").remove();
+        // TOP 10 (9 pays, + Other -cumul des autres pays-)
+        const topCountries = aggregatedData.slice(0, 9);
+        const otherValue = aggregatedData.slice(9).reduce((sum, d) => sum + d.value, 0);
+        if (otherValue > 0) {
+            topCountries.push({ country: "Other", value: otherValue });
+        }
     
-        // Dimensions 
-        const width = 300;
-        const height = 300;
-        const radius = Math.min(width, height) / 2;
+        const totalValue = d3.sum(topCountries, d => d.value);
     
-        const svg = d3.select("#pieChart")
-            .append("svg")
-            .attr("width", width)
-            .attr("height", height)
+        // Container
+        const container = d3.select("#pieChart");
+        container.html("");
+    
+        const containerNode = container.node();
+        if (!containerNode) {
+            console.error("Container with id 'pieChart' not found.");
+            return;
+        }
+    
+        // Dimensions
+        const containerWidth = containerNode.getBoundingClientRect().width || 800;
+        const containerHeight = containerNode.getBoundingClientRect().height || 400; 
+        console.log("svgWidth", containerWidth);
+        console.log("svgHeight", containerHeight);
+    
+        const svgWidth = containerWidth * 0.9;
+        const svgHeight = containerHeight * 0.9;
+        const radius = Math.min(svgWidth, svgHeight) / 3;
+        console.log("radius", radius);
+    
+        if (containerWidth === 0 || containerHeight === 0) {
+            console.error("Invalid container dimensions.");
+            return;
+        }
+    
+        const svg = container.append("svg")
+            .attr("width", svgWidth)
+            .attr("height", svgHeight)
             .append("g")
-            .attr("transform", `translate(${width / 2}, ${height / 2})`);
+            .attr("transform", `translate(${svgWidth / 2}, ${svgHeight / 2})`);
     
-        // Couleurs 
+        // Couleurs
         const color = d3.scaleOrdinal(d3.schemeCategory10);
     
-        // Tooltip setup
-        const tooltip = d3.select("body").append("div")
+        // Tooltip
+        const tooltip = d3.select("body")
+            .append("div")
             .style("position", "absolute")
             .style("background-color", "white")
-            .style("padding", "5px 10px")
+            .style("padding", "8px")
             .style("border", "1px solid #ccc")
             .style("border-radius", "5px")
             .style("pointer-events", "none")
             .style("opacity", 0);
     
-        // Création du camembert et le générateur d'arcs
         const pie = d3.pie().value(d => d.value);
         const arc = d3.arc().innerRadius(0).outerRadius(radius);
     
-        // dessin des arcs 
-        const arcs = svg.selectAll("arc")
-            .data(pie(topData))
+        // Arcs
+        const arcs = svg.selectAll(".arc")
+            .data(pie(topCountries))
             .enter()
             .append("g")
             .attr("class", "arc")
             .on("mouseover", function(event, d) {
-                // Create a new tooltip on hover
-                const tooltip = d3.select("body").append("div")
-                    .attr("class", "tooltip") 
-                    .style("position", "absolute")
-                    .style("background-color", "white")
-                    .style("padding", "5px 10px")
-                    .style("border", "1px solid #ccc")
-                    .style("border-radius", "5px")
-                    .style("pointer-events", "none")
-                    .style("opacity", 1)
-                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()} tonnes<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
-                })
+                tooltip.style("opacity", 1)
+                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
+            })
             .on("mousemove", function(event) {
-                d3.select(".tooltip")
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 20) + "px");
+                tooltip.style("left", `${event.pageX + 10}px`)
+                    .style("top", `${event.pageY - 20}px`);
             })
             .on("mouseout", function() {
-                // remove tooltip
-                d3.select(".tooltip").remove();
+                tooltip.style("opacity", 0);
             });
     
-        // ajout des arcs colorés
         arcs.append("path")
             .attr("d", arc)
             .attr("fill", d => color(d.data.country));
     
-        // reset
-        svg.on("mouseleave", () => d3.select(".tooltip").remove());
+        const legendContainer = svg.append("g")
+            .attr("transform", `translate(${radius + 50}, ${-radius})`);
+    
+        // Légende
+        const legend = legendContainer.selectAll(".legend")
+            .data(topCountries)
+            .enter()
+            .append("g")
+            .attr("class", "legend")
+            .attr("transform", (d, i) => `translate(0, ${i * 25})`);
+    
+        legend.append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("fill", d => color(d.country));
+    
+        legend.append("text")
+            .attr("x", 20)
+            .attr("y", 10)
+            .style("font-size", "12px")
+            .style("font-family", "Arial, sans-serif")
+            .text(d => `${d.country}`);
     }
+    
     
     // fonction pour exclure les regroupements
     function isRegionOrGlobal(name) {

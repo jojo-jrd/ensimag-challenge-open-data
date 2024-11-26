@@ -233,6 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const country = getLastCountryAdded();
         if (!country) {
             console.log("No country selected");
+            d3.select("#graph1").html("Select a country");
             return;
         }
 
@@ -269,14 +270,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const baseEmission = mode === "PRODUCTIONEMISSION"
                 ? dataEmission.reduce((sum, e) => sum + (e.total_average * d.value || 0), 0) 
                 : dataEmission.reduce((sum, e) => {
-                    console.log("e.product : ", e.product);
-                    console.log("meat", meat);
                     if (meat.some(m => e.product.toLowerCase().includes(m.toLowerCase()))) {
                         const matchingMeat = dataConsumption.find
                                                 (c => c.location === d.location && c.year === year &&
                                                     e.product.toLowerCase().includes(c.type_meat.toLowerCase())
                         );
-                        console.log("matchingMeat", matchingMeat);
                         return sum + (matchingMeat ? e.total_average * matchingMeat.value * 1000 : 0);
                     }
                     return sum;
@@ -293,6 +291,24 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // Remove
         d3.select("#graph1").selectAll("*").remove();
+        d3.select("#graph1").html("");
+
+        // Dimensions
+        const container = d3.select("#graph1");
+        const containerNode = container.node();
+        if (!containerNode) {
+            console.error("Container with id 'graph1' not found in the DOM.");
+            return;
+        }
+        const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
+        const margin = { top: 40, right: 20, bottom: 70, left: 70 };
+        const width = containerWidth - margin.left - margin.right;
+        const height = containerHeight - margin.top - margin.bottom;
+
+        if (width <= 0 || height <= 0) {
+            console.error("Invalid container dimensions for the chart.");
+            return;
+        }
     
         // SVG container
         const svg = d3.select("#graph1")
@@ -301,6 +317,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        // Tooltip container
+        const tooltip = d3.select("#graph1")
+        .append("div")
+        .style("position", "absolute")
+        .style("background", "white")
+        .style("border", "1px solid #ccc")
+        .style("border-radius", "5px")
+        .style("padding", "8px")
+        .style("pointer-events", "none")
+        .style("opacity", 0)
+        .style("font-size", "12px");
     
         // Axes
         const x = d3.scalePoint()
@@ -312,19 +340,19 @@ document.addEventListener("DOMContentLoaded", () => {
             .range([height, 0]);
     
         // Ajout des axes
-        svg.append("g")
-        .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .attr("transform", "rotate(-45)") // Rotattion 45°
-        .style("text-anchor", "end"); 
-        // Tous les 5 ans   
         // svg.append("g")
         // .attr("transform", `translate(0, ${height})`)
-        // .call(
-        //     d3.axisBottom(x)
-        //         .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
-        // );
+        // .call(d3.axisBottom(x))
+        // .selectAll("text")
+        // .attr("transform", "rotate(-45)") // Rotattion 45°
+        // .style("text-anchor", "end"); 
+        // Tous les 5 ans   
+        svg.append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(
+            d3.axisBottom(x)
+                .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
+        );
     
         svg.append("g").call(d3.axisLeft(y));
     
@@ -343,14 +371,25 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // Points
         svg.selectAll(".dot")
-            .data(aggregatedData)
-            .enter()
-            .append("circle")
-            .attr("cx", d => x(d.year))
-            .attr("cy", d => y(d.value))
-            .attr("r", 4)
-            .attr("fill", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION);
-    
+        .data(aggregatedData)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(d.year))
+        .attr("cy", d => y(d.value))
+        .attr("r", 4)
+        .attr("fill", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION)
+        .on("mouseover", (event, d) => {
+            tooltip.style("opacity", 1)
+                .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+        })
+        .on("mousemove", (event) => {
+            tooltip.style("left", `${event.pageX + 10}px`)
+                .style("top", `${event.pageY - 20}px`);
+        })
+        .on("mouseout", () => {
+            tooltip.style("opacity", 0);
+        });    
+        
         // Titre
         svg.append("text")
             .attr("x", width / 2)
@@ -366,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const country = getLastCountryAdded();
         if(country == null) {
             console.log(`No country selected`);
+            d3.select("#graph1").html("Select a country");
             return;
         }
 
@@ -388,6 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Pays inconnu
         if (!dataCountry) {
             console.error(`No data found for country: ${country}`);
+            d3.select("#graph1").html("No data for the selected country");
             return;
         }
 
@@ -399,36 +440,46 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // Gestion du mode
         if(mode === "CONSUMPTIONEMISSION") {
+            console.log("debut du mode conso");
             meatEmissionData = filteredEmissionData.map(emission => {
-                // match
+                // related consumption for meat type
                 const relatedConsumption = consumptionDataForYear.find(cons => {
-                    return cons.location === dataCountry.code 
-                    && emission.product.toLowerCase().includes(cons.type_meat);
+                    return cons.location === dataCountry.code &&
+                        emission.product.toLowerCase().includes(cons.type_meat);
                 });
-            
+        
                 if (!relatedConsumption) {
-                    console.error("PROB RELATED CONS: No consumption match for", emission.product, "code :", dataCountry.code);
-                    return null; 
+                    console.warn(`No matching consumption data for ${emission.product}. Setting to 0.`);
+                    return {
+                        product: emission.product,
+                        total: 0,
+                        volume: 0,
+                        land: 0,
+                        feed: 0,
+                        farm: 0,
+                        processing: 0,
+                        transport: 0,
+                        packaging: 0,
+                        retail: 0,
+                    };
                 }
-                
-                console.log("relatedConsumption", relatedConsumption);
-            
-                const volume = relatedConsumption?.value ? relatedConsumption.value * 1000 : 0;
+        
+                const volume = relatedConsumption.value * 1000; 
                 const total = (emission.total || 0) * volume;
-    
+        
                 return {
                     product: emission.product,
-                    total: total,
-                    volume: volume,
+                    total,
+                    volume,
                     land: (emission.land || 0) * volume,
                     feed: (emission.feed || 0) * volume,
                     farm: (emission.farm || 0) * volume,
                     processing: (emission.processing || 0) * volume,
                     transport: (emission.transport || 0) * volume,
                     packaging: (emission.packaging || 0) * volume,
-                    retail: (emission.retail || 0) * volume
+                    retail: (emission.retail || 0) * volume,
                 };
-            }).filter(item => item && item.volume > 0 && item.total > 0);
+            }).filter(item => item.volume > 0 || item.total > 0);
         } else {
             meatEmissionData = filteredEmissionData.map(emission => {
                 const relatedProduction = productionDataForYear.find(d => d.country === country);;
@@ -455,6 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (meatEmissionData.length === 0) {
             console.error("No valid emission data available for chart.");
+            d3.select("#graph1").html("No valid emission data available for chart");
             return;
         }
 
@@ -482,7 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         console.log("emissions", emissions);
 
-        // Dimensions 
+        // Container
         const container = d3.select("#pieChart");
         container.html("");
 
@@ -492,8 +544,10 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Container with id 'pieChart' not found in the DOM.");
             return;
         }
-        const { width, height } = containerNode.getBoundingClientRect();
-        const radius = Math.min(width, height) / 2;
+        const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
+        const svgWidth = containerWidth;
+        const svgHeight = containerHeight;
+        const radius = Math.min(svgWidth, svgHeight) / 3; 
 
         if (width === 0 || height === 0) {
             console.error("Invalid container dimensions for the pie chart.");
@@ -511,9 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
             { type: "Retail", value: emissions.retail || 0 }
         ].filter(d => d.value > 0); // Remove stages with 0 or invalid values
 
-        console.log("Pie Data:", pieData); // Debug
-
-        // Remove container
+        // Remove 
         d3.select("#pieChart").selectAll("*").remove();
 
         // Container svg 
@@ -522,12 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("width", width)
             .attr("height", height)
             .append("g")
-            .attr("transform", `translate(${width / 2}, ${height / 2})`);
-
-        if (!d3.select("#pieChart").node()) {
-            console.error("Container with id 'pieChart' not found in the DOM.");
-            return;
-        }
+            .attr("transform", `translate(${radius + 30}, ${height / 2})`); 
 
         // Couleurs
         const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -573,6 +620,30 @@ document.addEventListener("DOMContentLoaded", () => {
         .on("mouseout", function () {
             tooltip.style("opacity", 0); // hide the tooltip
         });
+
+        // Append legend
+        const legendContainer = svg.append("g")
+        .attr("transform", `translate(${radius + 40}, ${-radius})`);
+
+        const legend = legendContainer.selectAll(".legend")
+            .data(pieData)
+            .enter()
+            .append("g")
+            .attr("class", "legend")
+            .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
+        legend.append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("fill", d => color(d.type));
+
+        legend.append("text")
+            .attr("x", 18)
+            .attr("y", 10)
+            .style("font-size", "12px")
+            .text(d => `${d.type}`);
 
         // Hide tooltip when leaving the container
         container.on("mouseleave", () => tooltip.style("opacity", 0));
