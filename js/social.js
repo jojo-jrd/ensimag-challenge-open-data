@@ -63,8 +63,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
             return consumptionData.length > 0 ? d3.mean(consumptionData, dp => dp.value) : 0;
         } else if (mode == "PRICE") {
-            const priceData = dataPrice.find(dp => dp.code === d.id && dp.year == year);
-            return priceData ? priceData.value : 0;
+            const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
+            const averages = {};
+            ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
+                const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
+                const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
+                averages[type] = typeAverage;
+            });
+
+            const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
+            const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+            const avgConsumption = consumptionData.length > 0
+                ? d3.mean(consumptionData, dp => dp.value)
+                : "Donnée indisponible";
+            const finalvalue = overallAverage*avgConsumption
+            return finalvalue ? finalvalue : 0;
         }
         return 0;
     };
@@ -130,8 +143,23 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (mode == "PRICE") {
-                const priceData = dataPrice.find(dp => dp.code === d.id && dp.year == year);
-                infoHTML += `<br>Prix : ${priceData ? priceData.value.toLocaleString() + " €/tonne" : "Donnée indisponible"}`;
+                const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
+                const averages = {};
+                ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
+                    const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
+                    const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
+                    averages[type] = typeAverage;
+                });
+
+                const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
+                
+                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                const avgConsumption = consumptionData.length > 0
+                    ? d3.mean(consumptionData, dp => dp.value)
+                    : "Donnée indisponible";
+                const finalvalue = overallAverage*avgConsumption
+                console.log(finalvalue)
+                infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
             }
 
             tooltipChart.style("opacity", 1)
@@ -194,14 +222,32 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("opacity", 0);
     
         const path = d3.geoPath().projection(projection);
-
+        
+        const getColorRange = (mode) => {
+            switch (mode) {
+                case "PRODUCTION":
+                    return [
+                        "#fbe4a1", "#f4c670", "#eda73f", "#e79310", "#d3840d",
+                        "#b7730a", "#9a6208", "#7e5005", "#623e03"
+                    ];
+                case "CONSUMPTION":
+                    return [
+                        "#f3c2f9", "#e798f2", "#db6eec", "#cf44e5", "#b63ac8",
+                        "#9c31aa", "#83188e", "#690f72", "#4f0657"
+                    ];
+                case "PRICE":
+                    return [
+                        "#b9f1a8", "#94e07c", "#70d051", "#4cc026", "#3ca61d",
+                        "#318417", "#276311", "#1c420b", "#112105"
+                    ];
+                default:
+                    throw new Error(`Unknown mode: ${mode}`);
+            }
+        };
+        
         const colorScale = d3.scaleQuantile()
             .domain([0, d3.max(geoData.features, valueAccessor)])
-            .range([
-                "#00a89b", "#00988a", "#00877a", "#00766a", "#00655a",
-                "#00544a", "#004439", "#003428", "#002317"
-            ]);
-            // TODO color
+            .range(getColorRange(mode));        
         
         const countriesFilters = filters["country"].map(countryToCodeMapping);
         svg.selectAll("path")
