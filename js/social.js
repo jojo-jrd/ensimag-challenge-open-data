@@ -1,11 +1,11 @@
-import {initListenersFilters} from './filters.js'
+import {initListenersFilters, initFilters} from './filters.js'
 
 const COLOR_PRODUCTION = "#e7a30c",
     COLOR_CONSUMPTION = "#ae13bb",
     COLOR_PRICE = "#45b707";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataPrice, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -41,30 +41,149 @@ document.addEventListener("DOMContentLoaded", () => {
             salmon_price : +d["Salmon Price"],
             salmon_price_percentage : d["Salmon price % Change"] == "NaN" ? NaN : d["Salmon price % Change"]
         }));
+
+        geoData = await d3.json("./../countries.geo.json")
+    }
+
+    function countryToCodeMapping(countryName) {
+        return dataProduction.find(d => d.country === countryName).code;
+    }
+
+    /*
+        ==========================================
+        FONCTIONS DU GRAPHIQUE CARTE
+        ==========================================
+    */
+
+    function valueAccessor(d) {
+        if (mode == "PRODUCTION") {
+            const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+            return productionData ? productionData.value : 0;
+        } else if (mode == "CONSUMPTION") {
+            const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+            return consumptionData.length > 0 ? d3.mean(consumptionData, dp => dp.value) : 0;
+        } else if (mode == "PRICE") {
+            const priceData = dataPrice.find(dp => dp.code === d.id && dp.year == year);
+            return priceData ? priceData.value : 0;
+        }
+        return 0;
+    };
+
+    let tooltipChart;
+    function addColorLegend(svg, colorScale) {
+        const legendWidth = 200;
+        const legendHeight = 20;
+
+        const legendGroup = svg.append("g")
+            .attr("transform", `translate(${width - legendWidth + 80}, ${height + 150})`);
+        
+        const gradient = svg.append("defs")
+            .append("linearGradient")
+            .attr("id", "blue-gradient")
+            .attr("x1", "0%")
+            .attr("x2", "100%")
+            .attr("y1", "0%")
+            .attr("y2", "0%");
+
+        const colorRange = colorScale.range();
+        colorRange.forEach((color, index) => {
+            gradient.append("stop")
+                .attr("offset", `${(index / (colorRange.length - 1)) * 100}%`)
+                .attr("stop-color", color); 
+        });
+
+        legendGroup.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .style("fill", "url(#blue-gradient)");
+        
+        const numTicks = 3;
+        const tickValues = d3.range(0, numTicks).map(i => d3.quantile(colorScale.domain(), i / (numTicks - 1)));
+        
+        legendGroup.selectAll(".legend-tick")
+            .data(tickValues)
+            .enter()
+            .append("text")
+            .attr("class", "legend-tick")
+            .attr("x", (d, i) => i * (legendWidth / (numTicks - 1)))
+            .attr("y", legendHeight + 15)
+            .attr("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text(d => d3.format(",.0f")(d)); 
+    }        
+    
+    function handleMouseOver(event, d) {
+        if (d.id !== "BMU") {
+            let infoHTML = `<strong>${d.properties.name}</strong>`;
+
+            if (mode == "PRODUCTION") {
+                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+                infoHTML += `<br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}`;
+            }
+
+            if (mode == "CONSUMPTION") {
+                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+                const avgConsumption = consumptionData.length > 0
+                    ? d3.mean(consumptionData, dp => dp.value)
+                    : "Donnée indisponible";
+                infoHTML += `<br>Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`;
+            }
+
+            if (mode == "PRICE") {
+                const priceData = dataPrice.find(dp => dp.code === d.id && dp.year == year);
+                infoHTML += `<br>Prix : ${priceData ? priceData.value.toLocaleString() + " €/tonne" : "Donnée indisponible"}`;
+            }
+
+            tooltipChart.style("opacity", 1)
+                .html(infoHTML);
+        }
+    }
+
+    function handleMouseMove(event) {
+        tooltipChart.style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 20) + "px");
+    }
+
+    function handleMouseOut() {
+        tooltipChart.style("opacity", 0);
+    }
+
+    function handleClick(event, d) {
+        if (!d.id) {
+            return;
+        }
+        // Trouver le pays dans dataProduction
+        const countryData = dataProduction.find(dp => dp.code === d.id);
+        if (!countryData) return; // Pas de données correspondantes
+
+        const countryName = countryData.country;
+
+        // Vérifie si le pays est déjà dans le filtre
+        const index = filters["country"].indexOf(countryName);
+        if (index > -1) {
+            // Supprime le pays si présent
+            filters["country"].splice(index, 1);
+        } else {
+            // Ajoute le pays si absent
+            filters["country"].push(countryName);
+        }
+
+        updateData();
     }
 
     function chartMap() {
-        // TODO gestion des données en fonction du mode, des filtres et de l'année
-        let data;
-        if (mode == "PRODUCTION") {
-            data = dataProduction;
-        } else if (mode == "PRICE") {
-            data = dataPrice;
-        } else {
-            data = dataConsumption;
-        }        
-
         const svg = d3.select("#graph-map")
-        .append("svg")
-        .attr("width", "100%")
-        .attr("height", height + 200);
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", height + 200);
     
         const projection = d3.geoMercator()
             .scale(150)
             .translate([width / 1.54, height / 1]);
-        
-        // Configuration du tooltip
-        const tooltip = d3.select("body")
+
+        if (tooltipChart) tooltipChart.remove();
+
+        tooltipChart = d3.select("body")
             .append("div")
             .style("position", "absolute")
             .style("background-color", "white")
@@ -73,135 +192,152 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("border-radius", "5px")
             .style("pointer-events", "none")
             .style("opacity", 0);
-        
-        // Configuration du zoom
-        const zoom = d3.zoom()
-            .scaleExtent([1, 8])
-            .on("zoom", (event) => {
-                svg.selectAll("path").attr("transform", event.transform);
-            });
-        
-        d3.select("#resetZoom").on("click", () => {
-            svg.transition()
-                .duration(750)
-                .call(zoom.transform, d3.zoomIdentity);
-        });
-        
-        const path = d3.geoPath().projection(projection);
-        svg.call(zoom);
-        
-        // Chargement des données géographiques
-        d3.json("./../countries.geo.json").then((geoData) => {
-            const countries = svg.selectAll("path")
-                .data(geoData.features)
-                .enter()
-                .append("path")
-                .attr("d", path)
-                .attr("fill", "#ccc") // Couleur par défaut
-                .attr("stroke", "#333") // Couleur de la bordure
-                .attr("stroke-width", 0.5)
-                .on("mouseover", handleMouseOver)
-                .on("mousemove", handleMouseMove)
-                .on("mouseout", handleMouseOut);
-        });
-        
-        // Fonction de gestion de la souris sur le pays
-        function handleMouseOver(event, d) {
-            if (d.id !== "BMU") {
-                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                const avgConsumption = consumptionData.length > 0 
-                    ? d3.mean(consumptionData, dp => dp.value) 
-                    : "Donnée indisponible";
-        
-                d3.select(this).attr("fill", "#003366");
-                tooltip.style("opacity", 1)
-                    .html(`<strong>${d.properties.name}</strong>
-                        <br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}
-                        <br>Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`);
-            }
-        }
-        
-        // Fonction de gestion du mouvement de la souris pour le tooltip
-        function handleMouseMove(event) {
-            tooltip.style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 20) + "px");
-        }
-        
-        // Fonction de gestion de la sortie de la souris
-        function handleMouseOut() {
-            d3.select(this).attr("fill", "#ccc");
-            tooltip.style("opacity", 0);
-        }
     
+        const path = d3.geoPath().projection(projection);
+
+        const colorScale = d3.scaleQuantile()
+            .domain([0, d3.max(geoData.features, valueAccessor)])
+            .range([
+                "#00a89b", "#00988a", "#00877a", "#00766a", "#00655a",
+                "#00544a", "#004439", "#003428", "#002317"
+            ]);
+            // TODO color
+        
+        const countriesFilters = filters["country"].map(countryToCodeMapping);
+        svg.selectAll("path")
+            .data(geoData.features)
+            .enter()
+            .append("path")
+            .attr("d", path)
+            .attr("fill", (d) => {
+                const value = valueAccessor(d);
+                return value ? colorScale(value) : "#ccc";
+            })
+            .attr("stroke", "#333")
+            .attr("stroke-width", d => countriesFilters.includes(d.id) ? 2 : 0.5) // Bordure différente pour les pays sélectionnés
+            .on("mouseover", handleMouseOver)
+            .on("mousemove", handleMouseMove)
+            .on("mouseout", handleMouseOut)
+            .on("click", handleClick); // Ajouter l'événement de clic ici
+
+        addColorLegend(svg, colorScale);
     }
+    
 
     function chart1() {
-        // TODO gestion des données en fonction du mode, des filtres et de l'année
-        let data;
-        if (mode == "PRODUCTION") {
-            data = dataProduction;
-        } else if (mode == "PRICE") {
-            data = dataProduction; // TODO change
-        } else {
-            data = dataConsumption;
+        // Récupérer le pays sélectionné 
+        const country = getLastCountryAdded();
+        if(country == null) {
+            console.log('No country selected');
+            return;
+        }
+        // Code du pays
+        let code = dataProduction.find(d => d.country === country).code;
+        if(code == null) {
+            console.log('No code found for the country');
+            return;
         }
 
+        // Gestion du mode
+        let data = mode === "CONSUMPTION"
+            ? dataConsumption.filter(c => c.location === code)
+            : dataProduction.filter(d => d.country === country);
+
+        if (!data || data.length === 0) {
+            console.log('No data available for the selected country and mode');
+            return;
+        }
+
+        // Aggregate data 
+        const dataGrouped = d3.groups(data, d => d.year).map(([year, entries]) => {
+            return {
+                year: year,
+                value: d3.sum(entries, d => d.value) // même année
+            };
+        });
+
+        dataGrouped.sort((a, b) => a.year - b.year);
+
+        // Remove 
+        d3.select("#graph1").selectAll("*").remove();
+
+        // SVG container
         const svg = d3.select("#graph1")
             .append("svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
-            .attr("transform", `translate(${margin.left}, ${margin.top})`)
- 
-        // TODO change that
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-        const dataGrouped = data.reduce((acc, current) => {
-            const found = acc.find(item => item.year === current.year);
-            if (found) {
-            found.value += current.value; // Ajouter la valeur si l'année existe déjà
-            } else {
-            acc.push({ year: current.year, value: current.value }); // Ajouter une nouvelle entrée si l'année est nouvelle
-            }
-            return acc;
-        }, [])
-        
-        // Création de l'axe des absisses 
+        // Axes
         const x = d3.scalePoint()
-            .domain(dataGrouped.map(elem => elem.year))
+            .domain(dataGrouped.map(d => d.year))
             .range([0, width]);
-        
-        // Création de l'axe des ordonnées
+
         const y = d3.scaleLinear()
             .domain([0, d3.max(dataGrouped, d => d.value)])
             .range([height, 0]);
 
-        // Création et affichage des axes
+        // Ajout des axes
+        // Rota 45°
         svg.append("g")
-            .attr("transform", `translate(0, ${height})`)
-            .call(d3.axisBottom(x));
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-45)") // Rotattion 45°
+        .style("text-anchor", "end"); 
+        
+        // Tous les 5 ans   
+        // svg.append("g")
+        // .attr("transform", `translate(0, ${height})`)
+        // .call(
+        //     d3.axisBottom(x)
+        //         .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
+        // );
 
         svg.append("g")
             .call(d3.axisLeft(y));
 
-        // Création de la ligne
+        // Create the line generator
+        const line = d3.line()
+            .x(d => x(d.year))
+            .y(d => y(d.value));
+
+        // Draw the line
         svg.append("path")
             .datum(dataGrouped)
             .attr("fill", "none")
             .attr("stroke", color)
             .attr("stroke-width", 2)
-            .attr("d", d3.line()
-              .x(d => x(d.year))
-              .y(d => y(d.value))
-            );
+            .attr("d", line);
 
-        
-        // Création de la légende
+        // Add points for each data point
+        svg.selectAll(".dot")
+            .data(dataGrouped)
+            .enter()
+            .append("circle")
+            .attr("cx", d => x(d.year))
+            .attr("cy", d => y(d.value))
+            .attr("r", 4)
+            .attr("fill", color);
+
+        // Add a legend or title
         svg.append("text")
-            .attr("x", width - 80)
-            .attr("y", 20)
-            .attr("fill", color)
-            .text("TEST");
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text(`${mode === "PRODUCTION" ? "Production" : "Consumption"} Trends for ${country}`);
+
+    }
+
+    // Récupérer le dernier pays sélectionné
+    function getLastCountryAdded() {
+        if (filters['country'] && filters['country'].length > 0) {
+            return filters['country'][filters['country'].length - 1];
+        }
+        return null; 
     }
 
     function chart2() {
@@ -280,7 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const consumption = consumptionDataForYear.find(c => c.location === d.code); // match le code du pays
             return {
                 country: d.country,
-                value: mode === "PRODUCTION" ? d.value : (consumption ? consumption.value : 0)
+                value: mode === "PRODUCTION" ? d.value : (consumption ? consumption.value*1000 : 0)
             };
         }).filter(d => d.value > 0); // Filtrer les valeurs nulles
     
@@ -299,8 +435,8 @@ document.addEventListener("DOMContentLoaded", () => {
         d3.select("#pieChart").selectAll("*").remove();
     
         // Dimensions 
-        const width = 500;
-        const height = 500;
+        const width = 300;
+        const height = 300;
         const radius = Math.min(width, height) / 2;
     
         const svg = d3.select("#pieChart")
@@ -344,8 +480,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     .style("border-radius", "5px")
                     .style("pointer-events", "none")
                     .style("opacity", 1)
-                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
-            })
+                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()} tonnes<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
+                })
             .on("mousemove", function(event) {
                 d3.select(".tooltip")
                     .style("left", (event.pageX + 10) + "px")
@@ -433,16 +569,11 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    function initFilters() {
-        // TODO see for the others filters
-        filters['country'] = [];
-        const filtersCountries = dataProduction.map(d => d.country);
-        dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index)
-    }
+    
 
     async function initPage() {
         await loadData();
-        initFilters();
+        initFilters(dataFilters, filters, dataConsumption, dataProduction);
         initListeners();
         updateData();
     }

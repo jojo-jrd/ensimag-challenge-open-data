@@ -16,6 +16,15 @@ export function initListenersFilters(searchInput, resultContainer, dataFilters, 
     });
 }
 
+export function initFilters(dataFilters, filters, dataConsumption, dataProduction) {
+    filters['country'] = [];
+    filters['meat'] = [];
+    const filtersCountries = dataProduction.map(d => d.country).sort();
+    dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index);
+    const filtersTypeMeat = dataConsumption.map(d => d.type_meat).sort();
+    dataFilters['meat'] = filtersTypeMeat.filter((d, index) => filtersTypeMeat.indexOf(d) == index);
+}
+
 function updateResults(query, dataFilters, filters, resultContainer, updateData) {
     resultContainer.innerHTML = ""; // Vider le conteneur de résultats
 
@@ -27,8 +36,8 @@ function updateResults(query, dataFilters, filters, resultContainer, updateData)
             // Ajouter un séparateur de catégorie si plusieurs catégories
             if (Object.keys(dataFilters).length >= 2) {
                 const categoryDiv = document.createElement("div");
-                categoryDiv.classList.add("px-3", "py-2", "bg-gray-200", "text-gray-600", "font-semibold");
-                categoryDiv.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                categoryDiv.classList.add("px-3", "py-2", "bg-gray-200", "text-gray-600", "font-semibold", "capitalize");
+                categoryDiv.textContent = category;
                 resultContainer.appendChild(categoryDiv);
             }
 
@@ -43,15 +52,8 @@ function updateResults(query, dataFilters, filters, resultContainer, updateData)
                 // Cocher les cases des éléments déjà sélectionnés
                 if (filters[category].includes(item)) checkbox.checked = true;
 
-                checkbox.addEventListener("change", (e) => {
-                    if (e.target.checked) {
-                        addFilterItem(filters, category, item, updateData);
-                    } else {
-                        removeFilterItem(filters, category, item, updateData);
-                    }
-                });
-
                 const label = document.createElement("label");
+                label.classList.add("capitalize", "w-full");
                 label.htmlFor = `${category}-${index}`;
                 label.textContent = item;
 
@@ -59,6 +61,13 @@ function updateResults(query, dataFilters, filters, resultContainer, updateData)
                 itemDiv.classList.add("px-3", "py-2", "hover:bg-gray-100", "flex", "items-center");
                 itemDiv.appendChild(checkbox);
                 itemDiv.appendChild(label);
+                itemDiv.addEventListener("click", () => {
+                    if (checkbox.checked) {
+                        addFilterItem(filters, category, item, updateData);
+                    } else {
+                        removeFilterItem(filters, category, item, updateData);
+                    }
+                });
 
                 resultContainer.appendChild(itemDiv);
             });
