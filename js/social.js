@@ -328,7 +328,8 @@ document.addEventListener("DOMContentLoaded", () => {
             : dataProduction.filter(d => d.country === country);
 
         if (!data || data.length === 0) {
-            console.error('No data available for the selected country and mode', country, code);
+            console.log('No data available for the selected country and mode');
+            d3.select("#graph1").html("No data available for the selected country and mode");
             return;
         }
 
@@ -363,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const containerNode = container.node();
         const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
 
-        const margin = { top: 50, right: 20, bottom: 70, left: 70 };
+        const margin = { top: 50, right: 20, bottom: 70, left: 80 };
         const width = containerWidth - margin.left - margin.right;
         const height = containerHeight - margin.top - margin.bottom;
 

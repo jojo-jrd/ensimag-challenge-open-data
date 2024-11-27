@@ -236,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
             d3.select("#graph1").html("Select a country");
             return;
         }
+        console.log("country : ", country);
 
         // Récupérer la/les viande(s)
         let meat = getSelectedMeat();
@@ -254,13 +255,16 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // Gestion du dataset selon le mode
         const data = mode === "PRODUCTIONEMISSION"
-            ? dataProduction.filter(d => d.code === code)
+            ? dataProduction.filter(d => d.country === countryData.country)
             : dataConsumption.filter(d => d.location === code);
     
         if (!data || data.length === 0) {
-            console.error("No data available for the selected country and mode", country, code, mode);
+            console.log("No data available for the selected country and mode");
+            d3.select("#graph1").html("No data available for the selected country and mode");
             return;
         }
+
+        console.log("data", data);
     
         // Aggregate emissions
         const aggregatedData = data.map(d => {
@@ -287,6 +291,8 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("No aggregated data available for the chart.");
             return;
         }
+
+        console.log("aggregatedData", aggregatedData);
     
         // Remove
         d3.select("#graph1").selectAll("*").remove();
@@ -300,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
-        const margin = { top: 40, right: 20, bottom: 70, left: 70 };
+        const margin = { top: 40, right: 15, bottom: 70, left: 85 };
         const width = containerWidth - margin.left - margin.right;
         const height = containerHeight - margin.top - margin.bottom;
 
@@ -336,6 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
         const y = d3.scaleLinear()
             .domain([0, d3.max(aggregatedData, d => d.value)])
+            .nice()
             .range([height, 0]);
     
         // Ajout des axes
