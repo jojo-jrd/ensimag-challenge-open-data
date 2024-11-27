@@ -232,7 +232,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Récupérer le pays sélectionné
         const country = getLastCountryAdded();
         if (!country) {
-            console.log("No country selected");
             d3.select("#graph1").html("Select a country");
             return;
         }
@@ -241,14 +240,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Récupérer la/les viande(s)
         let meat = getSelectedMeat();
         if(meat == null) {
-            console.log(`No meat selected`);
             meat = dataEmission.map(e => e.product.toLowerCase()); // Default
         }
     
         // Données du pays
         const countryData = dataProduction.find(d => d.country === country);
         if (!countryData) {
-            console.log("No production data found for the selected country");
+            console.error("No production data found for the selected country");
             return;
         }
         // Code du pays
@@ -347,12 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .range([height, 0]);
     
         // Ajout des axes
-        // svg.append("g")
-        // .attr("transform", `translate(0, ${height})`)
-        // .call(d3.axisBottom(x))
-        // .selectAll("text")
-        // .attr("transform", "rotate(-45)") // Rotattion 45°
-        // .style("text-anchor", "end"); 
         // Tous les 5 ans   
         svg.append("g")
         .attr("transform", `translate(0, ${height})`)
@@ -411,18 +403,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Récupérer le pays 
         const country = getLastCountryAdded();
         if(country == null) {
-            console.log(`No country selected`);
             d3.select("#pieChart").html("Select a country");
             return;
         }
 
         // Récupérer la/les viande(s)
         const meat = getSelectedMeat();
-        if(meat == null) {
-            console.log(`No meat selected`);
-        }
 
-        console.log("Year : ", year);
         // Filtrer par rapport à l'année choisie, exclure les lignes ne correspondant pas à des pays
         const productionDataForYear = dataProduction
             .filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country));
@@ -470,9 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         retail: 0,
                     }; 
                 }
-                
-                console.log("relatedConsumption", relatedConsumption);
-            
+                            
                 const volume = relatedConsumption?.value ? relatedConsumption.value * 1000 : 0;
                 const total = (emission.total || 0) * volume;
     
@@ -516,15 +501,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        console.log("meatEmissionsData", meatEmissionData);
-
         // Calcul de la moyenne pondérée
         const totalVolume = meatEmissionData.reduce((sum, item) => sum + item.volume, 0);
         const weightedAverageEmissions = totalVolume > 0
             ? meatEmissionData.reduce((sum, item) => sum + (item.volume * item.total), 0) / totalVolume
             : 0;
-
-        console.log("Weighted Average Emissions:", weightedAverageEmissions.toFixed(2));
 
         // Calcul des contributions pour chaque étape du cycle de vie
         const totalVolumeForChart = totalVolume > 0 ? totalVolume : 1; // cas division par zero
@@ -537,8 +518,6 @@ document.addEventListener("DOMContentLoaded", () => {
             packaging: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.packaging || 0), 0) / totalVolumeForChart,
             retail: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.retail || 0), 0) / totalVolumeForChart,
         };
-
-        console.log("emissions", emissions);
 
         // Dimensions 
         const container = d3.select("#pieChart");
@@ -689,10 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Récupérer la viande sélectionnée
     function getSelectedMeat() {
-        if (filters['meat'] && filters['meat'].length > 0) {
-            return filters['meat']; 
-        }
-        //return []; 
+        return filters['meat']?.length ? filters['meat'] : null;
     }
 
     function updateData() {

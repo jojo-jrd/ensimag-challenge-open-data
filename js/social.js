@@ -184,7 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? d3.mean(consumptionData, dp => dp.value)
                     : "Donnée indisponible";
                 const finalvalue = overallAverage*avgConsumption
-                console.log(finalvalue)
                 infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
             }
 
@@ -312,14 +311,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Récupérer le pays sélectionné 
         const country = getLastCountryAdded();
         if(country == null) {
-            console.log('No country selected');
             d3.select("#graph1").html("Select a country");
             return;
         }
         // Code du pays
         let code = dataProduction.find(d => d.country === country).code;
         if(code == null) {
-            console.log('No code found for the country');
+            console.error('No code found for the country : ', country);
             return;
         }
 
@@ -444,84 +442,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Récupérer le dernier pays sélectionné
     function getLastCountryAdded() {
-        if (filters['country'] && filters['country'].length > 0) {
-            return filters['country'][filters['country'].length - 1];
-        }
-        return null; 
-    }
-
-    function chart2() {
-        // TODO gestion des données en fonction du mode, des filtres et de l'année
-        let data = dataPrice;
-        // if (mode == "PRODUCTION") {
-        //     data = dataProduction;
-        // } else if (mode == "PRICE") {
-        //     data = dataProduction; // TODO change
-        // } else {
-        //     data = dataConsumption;
-        // }
-
-        // Création du graphique
-        const svg = d3.select("#graph2")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", `translate(${margin.left}, ${margin.top})`)
-
-        // Création de l'axe des absisses 
-        const x = d3.scalePoint()
-            .domain(data.map(d => d.month))
-            .range([0, width]);
-
-        // Création de l'axe des ordonnées
-        // TODO: change that
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(data, d => Math.max(d.beef_price, d.chicken_price, d.lamb_price, d.pork_price, d.salmon_price))])
-            .range([height, 0]);
-
-        // Création et affichage des axes
-        svg.append("g")
-            .attr("transform", `translate(0, ${height})`)
-            .call(d3.axisBottom(x).tickFormat(d => d.slice(0, 3))); // Format mois abrégé
-        svg.append("g")
-            .call(d3.axisLeft(y));
-
-        const meats = ["beef_price", "chicken_price", "lamb_price", "pork_price", "salmon_price"];
-        // Récupération des couleurs
-        const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(meats);
-
-        // Création des lignes pour chaque viande
-        meats.forEach(meat => {
-            svg.append("path")
-                .datum(data.filter(d => !isNaN(d[meat])))
-                .attr("fill", "none")
-                .attr("stroke", colors(meat))
-                .attr("stroke-width", 2)
-                .attr("d", d3.line()
-                    .x(d => x(d.month))
-                    .y(d => y(d[meat]))
-                );
-        });
-
-        // Création des légendes
-        meats.forEach((meat, index) => {
-            svg.append("text")
-                .attr("x", width - 80)
-                .attr("y", 20 + index * 20)
-                .attr("fill", colors(meat))
-                .text(meat.replace("_price", "").toUpperCase());
-        });
+        return filters['country']?.length ? filters['country'][filters['country'].length - 1] : null;
     }
 
     function chartPie() {
-        console.log("mode", mode)
         // Gestion du dataset selon le mode
         const dataForYear = mode === "PRODUCTION"
             ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
             : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"));
-
-        console.log("dataForYear", dataForYear);
     
         if (!dataForYear || dataForYear.length === 0) {
             console.error("No data available for the selected mode and year.");
@@ -700,7 +628,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mets à jour tous les graphiques
         chartMap();
         chart1();
-        chart2();
         chartPie();
         // TODO other charts
     }

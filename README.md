@@ -44,8 +44,3 @@ Une page serait dédiée au **rapport détaillé** de la conception du projet, d
 ## Design
 
 Nous utilisons ici les sources de tailwind générés directement dans le fichier `tailwind.css`.
-
-## Esquisses
-
-Nous avons imaginé cette première version du mockup :
-![Mockup de l'application](opendata.png)
