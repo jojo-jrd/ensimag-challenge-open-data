@@ -518,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Gestion du dataset selon le mode
         const dataForYear = mode === "PRODUCTION"
             ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
-            : dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE");
+            : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"));
 
         console.log("dataForYear", dataForYear);
     
@@ -655,6 +655,24 @@ document.addEventListener("DOMContentLoaded", () => {
             .text(d => `${d.country}`);
     }    
     
+    function filterRealCountries(consumptionData, productionData) {
+        // Vrais pays dans production data
+        const validCountryCodes = new Set(productionData.map(d => d.code));
+    
+        // Separate invalid codes
+        const invalidCodes = new Set();
+
+        // Filter consumption data to include only rows with valid codes
+        const filteredConsumptionData = consumptionData.filter(d => {
+            if (!validCountryCodes.has(d.location)) {
+                invalidCodes.add(d.location); // Track invalid codes
+                return false; // Exclude invalid rows
+            }
+            return true; // Include valid rows
+        });
+
+        return filteredConsumptionData;
+    }
     
     // fonction pour exclure les regroupements
     function isRegionOrGlobal(name) {
