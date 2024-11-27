@@ -923,32 +923,11 @@ document.addEventListener("DOMContentLoaded", () => {
             // Sort the data by value
             dataPerCountry.sort((a, b) => b.value - a.value);
             // Only keep the top 7 countries
-            const selectedCountries = filters["country"];
-            if (selectedCountries.length >= 7) {
-                // Only keep the selected countries in dataPerCountry
-                const TopSelected = dataPerCountry.filter(d => selectedCountries.includes(d.country)).slice(0, 7);
-                return {
-                    dataPerYear: TopSelected,
-                    selectedCountries: selectedCountries,
-                    isInRange: data.length > 0,
-                    mode: "CONSUMPTION"
-                };
-            }
-
-            const numberOfSelectedNotInTop = selectedCountries.filter(d => !dataPerCountry.map(d => d.country).includes(d));
-
-            // On fait en sorte de garder les pays séléctionnés dans le top 7
-            const topCountries = dataPerCountry.slice(0, 7 - numberOfSelectedNotInTop.length);
-            for (let country of selectedCountries) {
-                const countryData = dataPerCountry.find(d => d.country === country);
-                if (countryData) {
-                    topCountries.push(countryData);
-                }
-            }
+            const topCountries = dataPerCountry.slice(0, 7);
 
             return {
                 dataPerYear: topCountries,
-                selectedCountries: selectedCountries,
+                selectedCountries: [],
                 isInRange: data.length > 0,
                 mode: "CONSUMPTION"
             };
