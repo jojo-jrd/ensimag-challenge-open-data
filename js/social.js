@@ -471,11 +471,14 @@ document.addEventListener("DOMContentLoaded", () => {
             d3.select("#pieChart").html("No data available for the selected mode and year");
             return;
         }
+
+        // Mapping code, name
+        const codeToCountryName = new Map(dataProduction.map(d => [d.code, d.country]));
     
         // Aggrégation par pays
         const aggregatedData = d3.groups(dataForYear, d => mode === "PRODUCTION" ? d.country : d.location)
             .map(([key, entries]) => ({
-                country: key,
+                country: codeToCountryName.get(key) || key,
                 value: d3.sum(entries, d => d.value)
             }))
             .filter(d => d.value > 0)
