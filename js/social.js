@@ -336,10 +336,26 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // Récupérer la/les viande(s)
+        let meat = getSelectedMeat(filters);
+        if (!meat || meat.length === 0) {
+            // Default to all meat types
+            meat = dataConsumption.map(d => d.type_meat.toLowerCase());
+        }
+
         // Gestion du mode
-        let data = mode === "CONSUMPTION"
-            ? dataConsumption.filter(c => c.location === code && c.measure === "THND_TONNE")
-            : dataProduction.filter(d => d.country === country);
+        let data;
+        if (mode === "PRODUCTION") {
+            // Production doesn't depend on meat type
+            data = dataProduction.filter(d => d.country === country);
+        } else if (mode === "CONSUMPTION") {
+            // Filter consumption data for the selected meats
+            data = dataConsumption.filter(d => 
+                d.location === code && 
+                d.measure === "THND_TONNE" && 
+                (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))
+            );
+        }
 
         if (!data || data.length === 0) {
             console.log('No data available for the selected country and mode');
