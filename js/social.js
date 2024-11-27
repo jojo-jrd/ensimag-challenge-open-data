@@ -100,9 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
             const avgConsumption = consumptionData.length > 0
-                ? d3.mean(consumptionData, dp => dp.value)
+                ? d3.sum(consumptionData, dp => dp.value)
                 : "Donnée indisponible";
-            const finalvalue = overallAverage*avgConsumption
+            const finalvalue = overallAverage*avgConsumption*1000
             return finalvalue ? finalvalue : 0;
         }
         return 0;
@@ -196,9 +196,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
                 const avgConsumption = consumptionData.length > 0
-                    ? d3.mean(consumptionData, dp => dp.value)
+                    ? d3.sum(consumptionData, dp => dp.value)
                     : "Donnée indisponible";
-                const finalvalue = overallAverage*avgConsumption
+                const finalvalue = overallAverage*avgConsumption*1000
                 infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
             }
 

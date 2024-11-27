@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return productionData? (productionData.value)*total_production : 0;
         } else {
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-            return consumptionData.length > 0 ? d3.mean(consumptionData, dp => dp.value)*total_consumption : 0;
+            return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value)*total_consumption : 0;
         }
     };
 
@@ -126,9 +126,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }        
     
     function handleMouseOver(event, d) {
-        // TODO LOAD DYNAMICALLY
-        let total_production = 16.50;
-        let total_average = 27.09;
+        const totalProductionSum = dataEmission.reduce((sum, item) => sum + item.total_from_land_to_retail, 0);
+        const totalAverageSum = dataEmission.reduce((sum, item) => sum + item.total_average, 0);
+        const itemCount = dataEmission.length;
+
+        let total_production = totalProductionSum / itemCount;
+        let total_average = totalAverageSum / itemCount;
         let total_consumption = total_average-total_production;
         if (d.id !== "BMU") {
             let infoHTML = `<strong>${d.properties.name}</strong>`;
@@ -139,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
                 const avgConsumption = consumptionData.length > 0 
-                    ? d3.mean(consumptionData, dp => dp.value)*total_consumption
+                    ? d3.sum(consumptionData, dp => dp.value)*total_consumption
                     : "Donnée indisponible";
                 infoHTML += `<br>C02/Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`;
             }
