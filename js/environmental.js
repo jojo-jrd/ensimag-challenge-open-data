@@ -5,7 +5,7 @@ const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_CONSUMPTION_EMISSION = "#4034f8";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataEmission, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
+    let dataConsumption, dataProduction, dataEmission, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -40,6 +40,20 @@ document.addEventListener("DOMContentLoaded", () => {
             total_from_land_to_retail : +d["Total from Land to Retail"],
             total_average : +d["Total Global Average GHG Emissions per kg"],
             unit : d["Unit of GHG Emissions"]
+        }));
+
+        dataPopulation = await d3.csv("./../csv/world_population.csv", d => ({
+            country : d["country"],
+            code : d["cca3"],
+            population_2023 : +d["2023 population"],
+            population_2022 : +d["2022 population"],
+            population_2020 : +d["2020 population"],
+            population_2015 : +d["2015 population"],
+            population_2010 : +d["2010 population"],
+            population_2000 : +d["2000 population"],
+            population_1990 : +d["1990 population"],
+            population_1980 : +d["1980 population"],
+            population_1970 : +d["1970 population"]
         }));
 
         geoData = await d3.json("./../countries.geo.json");
