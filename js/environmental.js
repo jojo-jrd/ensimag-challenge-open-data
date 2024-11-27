@@ -934,11 +934,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Récupérer la viande sélectionnée
-    function getSelectedMeat() {
-        return filters['meat']?.length ? filters['meat'] : null;
-    }
-
     function updateData() {
         // Supprime tous les graphiques précédents
         const allChart = document.querySelectorAll(".section svg");
