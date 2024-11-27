@@ -2,10 +2,12 @@ import {initListenersFilters, initFilters} from './filters.js';
 import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
 
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
-    COLOR_CONSUMPTION_EMISSION = "#4034f8";
+    COLOR_SELECTED_PRODUCTION_EMISSION = "#3d0035",
+    COLOR_CONSUMPTION_EMISSION = "#4034f8",
+    COLOR_SELECTED_CONSUMPTION_EMISSION = "#0e1f9d";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataEmission, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
+    let dataConsumption, dataProduction, dataEmission, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION, selectedColor = COLOR_SELECTED_PRODUCTION_EMISSION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -670,6 +672,289 @@ document.addEventListener("DOMContentLoaded", () => {
         container.on("mouseleave", () => tooltip.style("opacity", 0));
     }
 
+    function chartHistogram() {
+        const data = getHistogramData();
+        const dataPerYear = data.dataPerYear;
+        const selectedCountries = data.selectedCountries;
+        const isInRange = data.isInRange;
+        const mode = data.mode;
+
+        // If the year is out of range, display a message
+        if (!isInRange) {
+            d3.select("#legend").html("No data available for the selected year");
+            return;
+        } else {
+            d3.select("#legend").html("");
+        }
+        
+        
+        // Get dimensions from the DOM
+        const graphDiv = document.getElementById('legend');
+        const margin = { top: 40, right: 30, bottom: 10, left: 100 };
+        const width = graphDiv.clientWidth - margin.left - margin.right;
+        const height = graphDiv.clientHeight - margin.top - margin.bottom;
+
+        // Remove legend children
+        d3.select("#legend").selectAll("*").remove();
+    
+        const svg = d3.select("#legend")
+            .append("svg")
+            .attr("width", graphDiv.clientWidth+margin.left+margin.right)
+            .attr("height", graphDiv.clientHeight)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+    
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(dataPerYear, d => d.value)])
+            .range([0, width]);
+    
+        const y = d3.scaleBand()
+            .domain(dataPerYear.map(d => d.country))
+            .range([0, height])
+            .padding(0.1);
+        
+        // Titre
+        const title = mode === "PRODUCTION" ? "Ranking of CO2 emission for production (" + year + ")" : "Ranking of CO2 emission for consumption (" + year + ")";
+
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text(title);
+    
+        // Axes
+        // svg.append("g")
+        //     .attr("class", "axis axis--x")
+        //     .attr("transform", `translate(0,${height})`)
+        //     .call(d3.axisBottom(x).ticks(5));
+    
+        svg.append("g")
+            .attr("class", "axis axis--y")
+            .call(d3.axisLeft(y).tickSize(0))
+            .select(".domain").remove();
+    
+        // Tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "5px");
+    
+
+        // Define the drop shadow filter
+        const defs = svg.append("defs");
+        const filter = defs.append("filter")
+            .attr("id", "drop-shadow")
+            .attr("height", "130%");
+        
+        filter.append("feGaussianBlur")
+            .attr("in", "SourceAlpha")
+            .attr("stdDeviation", 1)
+            .attr("result", "blur");
+        
+        filter.append("feOffset")
+            .attr("in", "blur")
+            .attr("dx", 0.5)
+            .attr("dy", 0.5)
+            .attr("result", "offsetBlur");
+        
+        const feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode")
+            .attr("in", "offsetBlur");
+        feMerge.append("feMergeNode")
+            .attr("in", "SourceGraphic");
+
+        // Barres
+        svg.selectAll(".bar")
+        .data(dataPerYear)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("y", d => y(d.country))
+        .attr("height", y.bandwidth())
+        .attr("x", 0)
+        .attr("width", d => x(d.value))
+        .attr("rx", 5) // Set the x-axis radius for rounded corners
+        .attr("ry", 5) // Set the y-axis radius for rounded corners
+        .style("filter", "url(#drop-shadow)") // Apply the drop shadow filter
+        .style("fill", d => selectedCountries.includes(d.country) ? selectedColor : color) // Couleur selon sélection
+        .on("mouseover", function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            // créer une variable temporaire pour changer value en un chiffre lisible
+            let value = d.value;
+            if (value > 1000000) {
+                value = (value / 1000000).toFixed(2) + "M";
+            } else if (value > 1000) {
+                value = (value / 1000).toFixed(2) + "K";
+            } else {
+                value = value.toFixed(2);
+            }
+            tooltip.html(`${value} Kg CO2e`)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px")
+                .style("border", "1px solid " + color)
+                .style("border-radius", "5px")
+                .style("box-shadow", "0 4px 8px rgba(0, 0, 0, 0.3)");
+        })
+        .on("mouseout", function() {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+        
+        // Ajouter les valeurs dans les barres
+        svg.selectAll(".label")
+            .data(dataPerYear)
+            .enter().append("text")
+            .attr("class", "label")
+            .attr("y", d => y(d.country) + y.bandwidth() / 2 + 7) // Positionner verticalement au centre de la barre
+            .attr("x", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 80 ? x(value) - 10 : x(value) + 5; // Vérifier si le label a assez de place
+            })
+            .attr("text-anchor", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 80 ? "end" : "start"; // Ancrer le texte à la fin ou au début
+            })
+            .text(d => {
+                const value = parseFloat(d.value);
+                if (mode === "PRICE") {
+                    //truncate the value to 2 decimal places and add €/kg
+                    return value.toFixed(2) + " €/kg";
+                } else {
+                    return value > 1000000 ? (value / 1000000).toFixed(2) + "M" : (value / 1000).toFixed(2) + "K";
+                }
+            })
+            .style("fill", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 80 ? "white" : "black"; // Changer la couleur du texte
+            })
+            .style("font-size", "20px");
+    }
+
+    function getHistogramData() {
+        let data;
+        console.log("mode", mode);
+        if (mode == "PRODUCTIONEMISSION") {
+            let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
+            data = dataProduction;
+            // Get the production data for the selected year
+            data = data.filter(d => d.year == year && d.code !== "0" && d.code !== "OWID_WRL");
+            // Get the total emissions for each country
+            const dataPerCountry = data.map(d => {
+                return {
+                    country: d.country,
+                    value: d.value * total_production
+                };
+            });
+            console.log("dataPerCountry", dataPerCountry);
+            // Sort the data by value
+            dataPerCountry.sort((a, b) => b.value - a.value);
+
+
+            const selectedCountries = filters["country"];
+
+            if (selectedCountries.length >= 7) {
+                // Only keep the selected countries in dataPerCountry
+                const TopSelected = dataPerCountry.filter(d => selectedCountries.includes(d.country)).slice(0, 7);
+                return {
+                    dataPerYear: TopSelected,
+                    selectedCountries: selectedCountries,
+                    isInRange: data.length > 0,
+                    mode: "PRODUCTION"
+                };
+            }
+
+            const numberOfSelectedNotInTop = selectedCountries.filter(d => !dataPerCountry.map(d => d.country).includes(d));
+
+            // On fait en sorte de garder les pays séléctionnés dans le top 7
+            const topCountries = dataPerCountry.slice(0, 7 - numberOfSelectedNotInTop.length);
+            for (let country of selectedCountries) {
+                const countryData = dataPerCountry.find(d => d.country === country);
+                if (countryData) {
+                    topCountries.push(countryData);
+                }
+            }
+
+            return {
+                dataPerYear: topCountries,
+                selectedCountries: selectedCountries,
+                isInRange: data.length > 0,
+                mode: "PRODUCTION"
+            };
+        } else {
+            if (year < 1990) {
+                return {
+                    dataPerYear: [],
+                    selectedCountries: [],
+                    isInRange: false,
+                    mode: "CONSUMPTION"
+                };
+            }
+            let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
+            let total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
+            let total_consumption = total_average-total_production;
+            data = dataConsumption;
+            const dataPop = dataPopulation;
+            // Get the consumption data for the selected year
+            data = data.filter(d => d.year == year && d.measure == "KG_CAP");
+            console.log("data", data);
+            const dataPerCountry = d3.groups(data, d => d.location).map(([location, entries]) => {
+                const total = d3.sum(entries, d => d.value);
+                const population = dataPop.find(d => d.code == location);
+                if (!population) {
+                    return;
+                }
+                // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
+                const popYear = Math.floor(year / 10) * 10;
+                const pop = population[`population_${popYear}`];
+                return {
+                    country: location,
+                    value: total*pop/1000*total_consumption
+                };
+            }
+            );
+            console.log("dataPerCountry", dataPerCountry);
+            // Sort the data by value
+            dataPerCountry.sort((a, b) => b.value - a.value);
+            // Only keep the top 7 countries
+            const selectedCountries = filters["country"];
+            if (selectedCountries.length >= 7) {
+                // Only keep the selected countries in dataPerCountry
+                const TopSelected = dataPerCountry.filter(d => selectedCountries.includes(d.country)).slice(0, 7);
+                return {
+                    dataPerYear: TopSelected,
+                    selectedCountries: selectedCountries,
+                    isInRange: data.length > 0,
+                    mode: "CONSUMPTION"
+                };
+            }
+
+            const numberOfSelectedNotInTop = selectedCountries.filter(d => !dataPerCountry.map(d => d.country).includes(d));
+
+            // On fait en sorte de garder les pays séléctionnés dans le top 7
+            const topCountries = dataPerCountry.slice(0, 7 - numberOfSelectedNotInTop.length);
+            for (let country of selectedCountries) {
+                const countryData = dataPerCountry.find(d => d.country === country);
+                if (countryData) {
+                    topCountries.push(countryData);
+                }
+            }
+
+            return {
+                dataPerYear: topCountries,
+                selectedCountries: selectedCountries,
+                isInRange: data.length > 0,
+                mode: "CONSUMPTION"
+            };
+        }
+    }
+
     // Récupérer la viande sélectionnée
     function getSelectedMeat() {
         return filters['meat']?.length ? filters['meat'] : null;
@@ -685,13 +970,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // Gère les données et la couleur en fonction du mode
         if (mode == "PRODUCTIONEMISSION") {
             color = COLOR_PRODUCTION_EMISSION;
+            selectedColor = COLOR_SELECTED_PRODUCTION_EMISSION;
         } else {
             color = COLOR_CONSUMPTION_EMISSION;
+            selectedColor = COLOR_SELECTED_CONSUMPTION_EMISSION;
         }
 
         // Mets à jour tous les graphiques
         chartMap();
         // TODO charts
+        chartHistogram();
         chart1();
         chartPie();
     }
