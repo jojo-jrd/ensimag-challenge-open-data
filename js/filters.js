@@ -1,3 +1,5 @@
+import {isRegionOrGlobal} from './utils.js';
+
 export function initListenersFilters(searchInput, resultContainer, dataFilters, filters, updateData) {
     searchInput.addEventListener("focus", () => {
         resultContainer.classList.remove("hidden");
@@ -20,7 +22,7 @@ export function initFilters(dataFilters, filters, dataConsumption, dataProductio
     filters['country'] = [];
     filters['meat'] = [];
     const filtersCountries = dataProduction.map(d => d.country).sort();
-    dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index);
+    dataFilters['country'] = filtersCountries.filter((d, index) => filtersCountries.indexOf(d) == index && !isRegionOrGlobal(d));
     const filtersTypeMeat = dataConsumption.map(d => d.type_meat).sort();
     dataFilters['meat'] = filtersTypeMeat.filter((d, index) => filtersTypeMeat.indexOf(d) == index);
 }

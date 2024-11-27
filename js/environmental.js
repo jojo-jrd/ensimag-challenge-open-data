@@ -1,10 +1,11 @@
-import {initListenersFilters, initFilters} from './filters.js'
+import {initListenersFilters, initFilters} from './filters.js';
+import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
 
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_CONSUMPTION_EMISSION = "#4034f8";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataEmission, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
+    let dataConsumption, dataProduction, dataEmission, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTIONEMISSION", year = 1961, color = COLOR_PRODUCTION_EMISSION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -29,9 +30,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dataEmission = await d3.csv("./../csv/meat-emissions.csv", d => ({
             product : d["Food product"],
+            land : +d["Land Use Change"],
+            feed : +d["Feed"],
+            farm : +d["Farm"],
+            processing : +d["Processing"],
+            transport : +d["Transport"],
+            packaging : +d["Packaging"],
+            retail : +d["Retail"],
             total_from_land_to_retail : +d["Total from Land to Retail"],
             total_average : +d["Total Global Average GHG Emissions per kg"],
             unit : d["Unit of GHG Emissions"]
+        }));
+
+        dataPopulation = await d3.csv("./../csv/world_population.csv", d => ({
+            country : d["country"],
+            code : d["cca3"],
+            population_2023 : +d["2023 population"],
+            population_2022 : +d["2022 population"],
+            population_2020 : +d["2020 population"],
+            population_2015 : +d["2015 population"],
+            population_2010 : +d["2010 population"],
+            population_2000 : +d["2000 population"],
+            population_1990 : +d["1990 population"],
+            population_1980 : +d["1980 population"],
+            population_1970 : +d["1970 population"]
         }));
 
         geoData = await d3.json("./../countries.geo.json");
@@ -221,6 +243,434 @@ document.addEventListener("DOMContentLoaded", () => {
         addColorLegend(svg, colorScale);  
     }
     
+    function chart1() {
+        // Récupérer le pays sélectionné
+        const country = getLastCountryAdded(filters);
+        if (!country) {
+            d3.select("#graph1").html("Select a country");
+            return;
+        }
+        console.log("country : ", country);
+
+        // Récupérer la/les viande(s)
+        let meat = getSelectedMeat();
+        if(meat == null) {
+            meat = dataEmission.map(e => e.product.toLowerCase()); // Default
+        }
+    
+        // Données du pays
+        const countryData = dataProduction.find(d => d.country === country);
+        if (!countryData) {
+            console.error("No production data found for the selected country");
+            return;
+        }
+        // Code du pays
+        const code = countryData.code;
+    
+        // Gestion du dataset selon le mode
+        const data = mode === "PRODUCTIONEMISSION"
+            ? dataProduction.filter(d => d.country === countryData.country)
+            : dataConsumption.filter(d => d.location === code);
+    
+        if (!data || data.length === 0) {
+            console.log("No data available for the selected country and mode");
+            d3.select("#graph1").html("No data available for the selected country and mode");
+            return;
+        }
+
+        console.log("data", data);
+    
+        // Aggregate emissions
+        const aggregatedData = data.map(d => {
+            const year = d.year;
+
+            const baseEmission = mode === "PRODUCTIONEMISSION"
+                ? dataEmission.reduce((sum, e) => sum + (e.total_average * d.value || 0), 0) 
+                : dataEmission.reduce((sum, e) => {
+                    if (meat.some(m => e.product.toLowerCase().includes(m.toLowerCase()))) {
+                        const matchingMeat = dataConsumption.find
+                                                (c => c.location === d.location && c.year === year &&
+                                                    e.product.toLowerCase().includes(c.type_meat.toLowerCase())
+                        );
+                        return sum + (matchingMeat ? e.total_average * matchingMeat.value * 1000 : 0);
+                    }
+                    return sum;
+                }, 0);
+
+            return { year, value: baseEmission };
+        });
+        aggregatedData.sort((a, b) => a.year - b.year);
+    
+        if (aggregatedData.length === 0) {
+            console.error("No aggregated data available for the chart.");
+            return;
+        }
+
+        console.log("aggregatedData", aggregatedData);
+    
+        // Remove
+        d3.select("#graph1").selectAll("*").remove();
+        d3.select("#graph1").html("");
+
+        // Dimensions
+        const container = d3.select("#graph1");
+        const containerNode = container.node();
+        if (!containerNode) {
+            console.error("Container with id 'graph1' not found in the DOM.");
+            return;
+        }
+        const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
+        const margin = { top: 40, right: 15, bottom: 70, left: 85 };
+        const width = containerWidth - margin.left - margin.right;
+        const height = containerHeight - margin.top - margin.bottom;
+
+        if (width <= 0 || height <= 0) {
+            console.error("Invalid container dimensions for the chart.");
+            return;
+        }
+    
+        // SVG container
+        const svg = d3.select("#graph1")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        // Tooltip container
+        const tooltip = d3.select("#graph1")
+        .append("div")
+        .style("position", "absolute")
+        .style("background", "white")
+        .style("border", "1px solid #ccc")
+        .style("border-radius", "5px")
+        .style("padding", "8px")
+        .style("pointer-events", "none")
+        .style("opacity", 0)
+        .style("font-size", "12px");
+    
+        // Axes
+        const x = d3.scalePoint()
+            .domain(aggregatedData.map(d => d.year))
+            .range([0, width]);
+    
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(aggregatedData, d => d.value)])
+            .nice()
+            .range([height, 0]);
+    
+        // Ajout des axes
+        // Tous les 5 ans   
+        svg.append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(
+            d3.axisBottom(x)
+                .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
+        );
+    
+        svg.append("g").call(d3.axisLeft(y));
+    
+        // Line
+        const line = d3.line()
+            .x(d => x(d.year))
+            .y(d => y(d.value));
+    
+        // Draw 
+        svg.append("path")
+            .datum(aggregatedData)
+            .attr("fill", "none")
+            .attr("stroke", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION)
+            .attr("stroke-width", 2)
+            .attr("d", line);
+    
+        // Points
+        svg.selectAll(".dot")
+        .data(aggregatedData)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(d.year))
+        .attr("cy", d => y(d.value))
+        .attr("r", 4)
+        .attr("fill", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION)
+        .on("mouseover", (event, d) => {
+            tooltip.style("opacity", 1)
+                .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+        })
+        .on("mousemove", (event) => {
+            tooltip.style("left", `${event.pageX + 10}px`)
+                .style("top", `${event.pageY - 20}px`);
+        })
+        .on("mouseout", () => {
+            tooltip.style("opacity", 0);
+        });    
+        
+        // Titre
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text(`${mode === "PRODUCTIONEMISSION" ? "Production Emissions" : "Consumption Emissions"} Trends for ${country}`);
+    }    
+
+    function chartPie() {
+        // Récupérer le pays 
+        const country = getLastCountryAdded(filters);
+        if(country == null) {
+            d3.select("#pieChart").html("Select a country");
+            return;
+        }
+
+        // Récupérer la/les viande(s)
+        const meat = getSelectedMeat();
+
+        // Filtrer par rapport à l'année choisie, exclure les lignes ne correspondant pas à des pays
+        const productionDataForYear = dataProduction
+            .filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country));
+        const consumptionDataForYear = dataConsumption
+            .filter(d => d.year === year && d.measure === "THND_TONNE");
+
+        // Récupérer le pays
+        let dataCountry = productionDataForYear.find(d => d.country === country);
+
+        // Pays inconnu
+        if (!dataCountry) {
+            console.error(`No data found for country: ${country}`);
+            d3.select("#pieChart").html("Select a country");
+            return;
+        }
+
+        let meatEmissionData;
+        // Filtrer les données d'émissions en fonction de la viande sélectionnée
+        const filteredEmissionData = meat
+        ? dataEmission.filter(emission => meat.some(meat => emission.product.toLowerCase().includes(meat.toLowerCase())))
+        : dataEmission;
+    
+        // Gestion du mode
+        if(mode === "CONSUMPTIONEMISSION") {
+            meatEmissionData = filteredEmissionData.map(emission => {
+                // match
+                const relatedConsumption = consumptionDataForYear.find(cons => {
+                    return cons.location === dataCountry.code 
+                        && emission.product.toLowerCase().includes(cons.type_meat);
+                });
+            
+                if (!relatedConsumption) {
+                    console.error("PROB RELATED CONS: No consumption match for", emission.product, "code :", dataCountry.code);
+                    d3.select("#pieChart").html(`No consumption match for ${dataCountry.code} in ${year}`);
+                    return {
+                        product: emission.product,
+                        total: 0,
+                        volume: 0,
+                        land: 0,
+                        feed: 0,
+                        farm: 0,
+                        processing: 0,
+                        transport: 0,
+                        packaging: 0,
+                        retail: 0,
+                    }; 
+                }
+                            
+                const volume = relatedConsumption?.value ? relatedConsumption.value * 1000 : 0;
+                const total = (emission.total || 0) * volume;
+    
+                return {
+                    product: emission.product,
+                    total: total,
+                    volume: volume,
+                    land: (emission.land || 0) * volume,
+                    feed: (emission.feed || 0) * volume,
+                    farm: (emission.farm || 0) * volume,
+                    processing: (emission.processing || 0) * volume,
+                    transport: (emission.transport || 0) * volume,
+                    packaging: (emission.packaging || 0) * volume,
+                    retail: (emission.retail || 0) * volume
+                };
+            }).filter(item => item && item.volume > 0 || item.total > 0);
+        } else {
+            meatEmissionData = filteredEmissionData.map(emission => {
+                const relatedProduction = productionDataForYear.find(d => d.country === country);;
+            
+                // calcul
+                const volume = relatedProduction.value; 
+            
+                return {
+                    product: emission.product,
+                    volume: volume, 
+                    land: emission.land * volume || 0, 
+                    feed: emission.feed * volume || 0, 
+                    farm: emission.farm * volume || 0, 
+                    processing: emission.processing * volume || 0, 
+                    transport: emission.transport * volume || 0, 
+                    packaging: emission.packaging * volume || 0, 
+                    retail: emission.retail * volume || 0, 
+                    total: emission.total * volume || 0 
+                };
+            }).filter(item => item !== null);
+        }
+
+        if (meatEmissionData.length === 0) {
+            console.error("No valid emission data available for chart.");
+            return;
+        }
+
+        // Calcul de la moyenne pondérée
+        const totalVolume = meatEmissionData.reduce((sum, item) => sum + item.volume, 0);
+        const weightedAverageEmissions = totalVolume > 0
+            ? meatEmissionData.reduce((sum, item) => sum + (item.volume * item.total), 0) / totalVolume
+            : 0;
+
+        // Calcul des contributions pour chaque étape du cycle de vie
+        const totalVolumeForChart = totalVolume > 0 ? totalVolume : 1; // cas division par zero
+        const emissions = {
+            land: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.land || 0), 0) / totalVolumeForChart,
+            feed: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.feed || 0), 0) / totalVolumeForChart,
+            farm: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.farm || 0), 0) / totalVolumeForChart,
+            processing: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.processing || 0), 0) / totalVolumeForChart,
+            transport: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.transport || 0), 0) / totalVolumeForChart,
+            packaging: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.packaging || 0), 0) / totalVolumeForChart,
+            retail: meatEmissionData.reduce((sum, item) => sum + (item.volume * item.retail || 0), 0) / totalVolumeForChart,
+        };
+
+        // Dimensions 
+        const container = d3.select("#pieChart");
+        container.html("");
+
+        // dimensions depuis le node 
+        const containerNode = container.node();
+        if (!containerNode) {
+            console.error("Container with id 'pieChart' not found in the DOM.");
+            return;
+        }
+        // Dimensions
+        const containerWidth = containerNode.getBoundingClientRect().width || 800; // Default width
+        const containerHeight = containerNode.getBoundingClientRect().height || 400; // Default height
+        const svgWidth = containerWidth * 0.95; 
+        const svgHeight = containerHeight * 0.95;
+        const radius = Math.min(svgWidth, svgHeight) / 3;
+
+        if (containerWidth === 0 || containerHeight === 0) {
+            console.error("Invalid container dimensions.");
+            return;
+        }
+
+        // Mapping
+        const pieData = [
+            { type: "Land Use Change", value: emissions.land || 0 },
+            { type: "Feed", value: emissions.feed || 0 },
+            { type: "Farm", value: emissions.farm || 0 },
+            { type: "Processing", value: emissions.processing || 0 },
+            { type: "Transport", value: emissions.transport || 0 },
+            { type: "Packaging", value: emissions.packaging || 0 },
+            { type: "Retail", value: emissions.retail || 0 }
+        ].filter(d => d.value > 0); // Remove stages with 0 or invalid values
+
+        // Remove container
+        d3.select("#pieChart").selectAll("*").remove();
+        d3.select("#pieChart").html("");
+
+        // Container svg 
+        const svg = d3.select("#pieChart")
+            .append("svg")
+            .attr("width", svgWidth)
+            .attr("height", svgHeight + 40)
+        
+        // Titre
+        svg.append("text")
+            .attr("x", svgWidth / 2)
+            .attr("y", 20) // Position title at the top
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("font-family", "Arial, sans-serif")
+            .text("Emissions distribution by stage");
+        
+        // Chart group 
+        const chartGroup = svg.append("g")
+            .attr("transform", `translate(${svgWidth / 2}, ${(svgHeight / 2) + 20})`);
+
+        // Couleurs
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+        // Générateurs pie & arcs
+        const pie = d3.pie().value(d => d.value);
+        const arc = d3.arc().innerRadius(0).outerRadius(radius);
+
+        // Tooltip setup
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("padding", "5px 10px")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "5px")
+            .style("pointer-events", "none")
+            .style("opacity", 0);
+
+        // Dessin des arc
+        const arcs = chartGroup
+        .selectAll(".arc")
+        .data(pie(pieData))
+        .enter()
+        .append("g")
+        .attr("class", "arc");
+
+        // Tooltip behavior
+        arcs.on("mouseover", function (event, d) {
+            const totalEmissions = d3.sum(pieData, e => e.value);
+            const percentage = ((d.data.value / totalEmissions) * 100).toFixed(2);
+            tooltip.style("opacity", 1)
+                .html(`<strong>${d.data.type}</strong><br>Total Emissions: ${d.data.value.toLocaleString()} kg CO₂e<br>Percentage: ${percentage}%`);
+        })
+        .on("mousemove", function (event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.style("opacity", 0); // hide the tooltip
+        });
+
+        arcs.append("path")
+            .attr("d", arc)
+            .attr("fill", d => color(d.data.type));
+
+        // Légende
+        const legend = svg.append("g")
+        .attr("transform", `translate(${svgWidth * 0.75}, 50)`);
+
+        const legendItems = legend.selectAll(".legend-item")
+        .data(pieData)
+        .enter()
+        .append("g")
+        .attr("class", "legend-item")
+        .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
+        legendItems.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", d => color(d.type));
+
+        legendItems.append("text")
+        .attr("x", 20)
+        .attr("y", 10)
+        .style("font-size", "12px")
+        .style("font-family", "Arial, sans-serif")
+        .text(d => `${d.type}`);
+
+
+        // Hide tooltip when leaving the container
+        container.on("mouseleave", () => tooltip.style("opacity", 0));
+    }
+
+    // Récupérer la viande sélectionnée
+    function getSelectedMeat() {
+        return filters['meat']?.length ? filters['meat'] : null;
+    }
+
     function updateData() {
         // Supprime tous les graphiques précédents
         const allChart = document.querySelectorAll(".section svg");
@@ -238,6 +688,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mets à jour tous les graphiques
         chartMap();
         // TODO charts
+        chart1();
+        chartPie();
     }
 
     function initListeners() {
