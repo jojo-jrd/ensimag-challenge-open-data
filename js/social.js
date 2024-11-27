@@ -230,7 +230,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const countryName = countryData.country;
 
         // Vérifie si le pays est déjà dans le filtre
-        console.log(filters["country"]);
         const index = filters["country"].indexOf(countryName);
         if (index > -1) {
             // Supprime le pays si présent
@@ -239,7 +238,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Ajoute le pays si absent
             filters["country"].push(countryName);
         }
-        console.log(filters["country"]);
 
         updateData();
     }
@@ -602,7 +600,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function chartHistogram() {
         const data = getHistogramData();
-        console.log(data);
         const dataPerYear = data.dataPerYear;
         const selectedCountries = data.selectedCountries;
         const isInRange = data.isInRange;
@@ -720,8 +717,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 value = (value / 1000000).toFixed(2) + "M";
             } else if (value > 1000) {
                 value = (value / 1000).toFixed(2) + "K";
+            } else {
+                value = value.toFixed(2);
             }
-            tooltip.html(`${value} tonnes`)
+            tooltip.html(`${value} ` + (mode === "PRICE" ? "€" : "tonnes"))
                 .style("left", (event.pageX + 5) + "px")
                 .style("top", (event.pageY - 28) + "px")
                 .style("border", "1px solid " + color)
@@ -802,7 +801,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 isInRange: true,
                 mode: "PRODUCTION"
             }
-            console.log(dataPerYear);
             return dataPerYearObj;
         } else if (mode == "PRICE") {
             if (year < 1990 || year > 2020) {
@@ -877,7 +875,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // On trie les données par prix
             const sortedData = Object.values(selectedYear).filter(d => d.name != "year" && d.value > 0).sort((a, b) => b.value - a.value);
             // On retourne les données triées
-            console.log(sortedData);
             //On supprime les données qui ont un prix à 0 ou NaN
             return {
                 dataPerYear: sortedData,
@@ -896,23 +893,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             data = dataConsumption;
             const dataPop = dataPopulation;
-            console.log(dataPop);
-            console.log(data);
             // Filtre les données pour l'année sélectionnée
             const filteredData = data.filter(d => d.year == year && d.measure === "KG_CAP");
             // On regroupe les données par pays en ayant la somme des valeurs et en gardant pour chaque valeur la clé et la valeur
             const dataPerYear = d3.groups(filteredData, d => d.location).map(([location, entries]) => {
                 // get the population for the country
                 const population = dataPop.find(d => d.code == location);
-                console.log(population);
                 if (!population) {
                     return;
                 }
                 // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
                 const popYear = Math.floor(year / 10) * 10;
-                console.log(popYear);
                 const pop = population[`population_${popYear}`];
-                console.log(pop);
                 return {
                     country: location,
                     value: d3.sum(entries, d => d.value*pop/1000), // On multiplie par la population pour avoir la consommation totale
@@ -924,7 +916,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     })
                 };
             });
-            console.log(dataPerYear);
             // On trie les données par valeur et on garde les 7 premières valeurs
             const topData = dataPerYear.filter(d => d).sort((a, b) => b.value - a.value).slice(0, 7);
             // On retourne les données triées
