@@ -21,3 +21,19 @@
 #priceButton:is(:hover, .selected) {
     background-color: #3da206;
 }
+
+:root {
+    --bar-color: #e7a30c;
+    --bar-hover-color: #623e03;
+}
+
+.bar {
+    fill: var(--bar-color);
+}
+.bar:hover {
+    fill: var(--bar-hover-color);
+}
+.axis--x path,
+.axis--x line {
+    display: none;
+}

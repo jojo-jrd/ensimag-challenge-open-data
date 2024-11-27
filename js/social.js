@@ -1,11 +1,14 @@
 import {initListenersFilters, initFilters} from './filters.js'
 
 const COLOR_PRODUCTION = "#e7a30c",
+    SELECTED_COLOR_PRODUCTION = "#623e03",
     COLOR_CONSUMPTION = "#ae13bb",
-    COLOR_PRICE = "#45b707";
+    SELECTED_COLOR_CONSUMPTION = "#d13ed1",
+    COLOR_PRICE = "#45b707",
+    SELECTED_COLOR_PRICE = "#6ed93a";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataPrice, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION, selectedColor = SELECTED_COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -187,6 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const countryName = countryData.country;
 
         // Vérifie si le pays est déjà dans le filtre
+        console.log(filters["country"]);
         const index = filters["country"].indexOf(countryName);
         if (index > -1) {
             // Supprime le pays si présent
@@ -195,6 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Ajoute le pays si absent
             filters["country"].push(countryName);
         }
+        console.log(filters["country"]);
 
         updateData();
     }
@@ -271,71 +276,252 @@ document.addEventListener("DOMContentLoaded", () => {
     
 
     function chart1() {
-        // TODO gestion des données en fonction du mode, des filtres et de l'année
+
+        const data = getHistogramData();
+        const dataPerYear = data.dataPerYear;
+        const selectedCountries = data.selectedCountries;
+        
+        
+        // Get dimensions from the DOM
+        const graphDiv = document.getElementById('graph1');
+        const margin = { top: 10, right: 30, bottom: 10, left: 100 };
+        const width = graphDiv.clientWidth - margin.left - margin.right;
+        const height = graphDiv.clientHeight - margin.top - margin.bottom;
+    
+        const svg = d3.select("#graph1")
+            .append("svg")
+            .attr("width", graphDiv.clientWidth+margin.left+margin.right)
+            .attr("height", graphDiv.clientHeight)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+    
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(dataPerYear, d => d.value)])
+            .range([0, width]);
+    
+        const y = d3.scaleBand()
+            .domain(dataPerYear.map(d => d.country))
+            .range([0, height])
+            .padding(0.1);
+    
+        // Axes
+        // svg.append("g")
+        //     .attr("class", "axis axis--x")
+        //     .attr("transform", `translate(0,${height})`)
+        //     .call(d3.axisBottom(x).ticks(5));
+    
+        svg.append("g")
+            .attr("class", "axis axis--y")
+            .call(d3.axisLeft(y).tickSize(0))
+            .select(".domain").remove();
+    
+        // Tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "5px");
+    
+
+        // Define the drop shadow filter
+        const defs = svg.append("defs");
+        const filter = defs.append("filter")
+            .attr("id", "drop-shadow")
+            .attr("height", "130%");
+        
+        filter.append("feGaussianBlur")
+            .attr("in", "SourceAlpha")
+            .attr("stdDeviation", 1)
+            .attr("result", "blur");
+        
+        filter.append("feOffset")
+            .attr("in", "blur")
+            .attr("dx", 0.5)
+            .attr("dy", 0.5)
+            .attr("result", "offsetBlur");
+        
+        const feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode")
+            .attr("in", "offsetBlur");
+        feMerge.append("feMergeNode")
+            .attr("in", "SourceGraphic");
+
+        // Barres
+        svg.selectAll(".bar")
+        .data(dataPerYear)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("y", d => y(d.country))
+        .attr("height", y.bandwidth())
+        .attr("x", 0)
+        .attr("width", d => x(d.value))
+        .attr("rx", 5) // Set the x-axis radius for rounded corners
+        .attr("ry", 5) // Set the y-axis radius for rounded corners
+        .style("filter", "url(#drop-shadow)") // Apply the drop shadow filter
+        .style("fill", d => selectedCountries.includes(d.country) ? selectedColor : color) // Couleur selon sélection
+        .on("mouseover", function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            // créer une variable temporaire pour changer value en un chiffre lisible
+            let value = d.value;
+            if (value > 1000000) {
+                value = (value / 1000000).toFixed(2) + "M";
+            } else if (value > 1000) {
+                value = (value / 1000).toFixed(2) + "K";
+            }
+            tooltip.html(`${value} tonnes`)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px")
+                .style("border", "1px solid " + color)
+                .style("border-radius", "5px")
+                .style("box-shadow", "0 4px 8px rgba(0, 0, 0, 0.3)");
+        })
+        .on("mouseout", function() {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+        
+        // Ajouter les valeurs dans les barres
+        svg.selectAll(".label")
+            .data(dataPerYear)
+            .enter().append("text")
+            .attr("class", "label")
+            .attr("y", d => y(d.country) + y.bandwidth() / 2 + 7) // Positionner verticalement au centre de la barre
+            .attr("x", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 30 ? x(value) - 10 : x(value) + 5; // Vérifier si le label a assez de place
+            })
+            .attr("text-anchor", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 30 ? "end" : "start"; // Ancrer le texte à la fin ou au début
+            })
+            .text(d => {
+                const value = parseFloat(d.value);
+                return value > 1000000 ? (value / 1000000).toFixed(2) + "M" : (value / 1000).toFixed(2) + "K";
+            })
+            .style("fill", d => {
+                const value = parseFloat(d.value);
+                return x(value) - 10 > 30 ? "white" : "black"; // Changer la couleur du texte
+            })
+            .style("font-size", "20px");
+    }
+
+    function getHistogramData() {
         let data;
         if (mode == "PRODUCTION") {
             data = dataProduction;
         } else if (mode == "PRICE") {
-            data = dataProduction; // TODO change
+            const data1 = dataPrice; // TODO change
+            const data2 = dataConsumption;
+            data = getCrossedData(data1, data2);
         } else {
             data = dataConsumption;
         }
+        console.log(data);
 
-        const svg = d3.select("#graph1")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", `translate(${margin.left}, ${margin.top})`)
- 
-        // TODO change that
+        const filteredData = data.filter(d => d.year == year && d.code !== "0" && d.code !== "OWID_WRL");
+    
+        // Inclure les pays sélectionnés dans filters[country]
+        const selectedCountries = filters["country"] || [];
+        const selectedData = filteredData.filter(d => selectedCountries.includes(d.country));
+    
+        // Trier par valeur pour obtenir les 7 plus grandes valeurs
+        const topData = filteredData
+            .filter(d => !selectedCountries.includes(d.country)) // Exclure les pays déjà sélectionnés
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 7 - selectedData.length); // Récupérer le reste des meilleurs pays
+    
+        // Combiner les pays sélectionnés et les meilleurs pays
+        const dataPerYear = selectedData.concat(topData).sort((a, b) => b.value - a.value);
 
-        const dataGrouped = data.reduce((acc, current) => {
-            const found = acc.find(item => item.year === current.year);
-            if (found) {
-            found.value += current.value; // Ajouter la valeur si l'année existe déjà
-            } else {
-            acc.push({ year: current.year, value: current.value }); // Ajouter une nouvelle entrée si l'année est nouvelle
+        console.log(dataPerYear);
+
+        //return dataPerYear and selectedCountries in an object
+        const dataPerYearObj = {
+            dataPerYear: dataPerYear,
+            selectedCountries: selectedCountries
+        }
+        return dataPerYearObj;
+    }
+
+    function getCrossedData(data1, data2) {
+        const data = [];
+        console.log(data1);
+        // Group data1 by year knowing that data1 only have monthly data ex: Sep-61, Oct-61, Nov-61. So we need to group by year and sum the values and divide by 12 and d3.nest is not a function
+        const data1PerYear = data1.reduce((acc, d) => {
+            let year = d.month.split('-')[1];
+            let real_year = parseInt(year) > 25 ? "19" + year : "20" + year;
+            if (!acc[real_year]) {
+                acc[real_year] = {
+                    year: real_year,
+                    beef_price: 0,
+                    chicken_price: 0,
+                    lamb_price: 0,
+                    pork_price: 0,
+                    salmon_price: 0
+                };
+            }
+            acc[real_year].beef_price += d.beef_price;
+            acc[real_year].chicken_price += d.chicken_price;
+            acc[real_year].lamb_price += d.lamb_price;
+            acc[real_year].pork_price += d.pork_price;
+            acc[real_year].salmon_price += d.salmon_price;
+            // When we reach the end of the array, we divide by 12
+            if (d == data1[data1.length - 1]) {
+                Object.keys(acc).forEach(key => {
+                    acc[key].beef_price /= 12;
+                    acc[key].chicken_price /= 12;
+                    acc[key].lamb_price /= 12;
+                    acc[key].pork_price /= 12;
+                    acc[key].salmon_price /= 12;
+                });
             }
             return acc;
-        }, [])
-        
-        // Création de l'axe des absisses 
-        const x = d3.scalePoint()
-            .domain(dataGrouped.map(elem => elem.year))
-            .range([0, width]);
-        
-        // Création de l'axe des ordonnées
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(dataGrouped, d => d.value)])
-            .range([height, 0]);
-
-        // Création et affichage des axes
-        svg.append("g")
-            .attr("transform", `translate(0, ${height})`)
-            .call(d3.axisBottom(x));
-
-        svg.append("g")
-            .call(d3.axisLeft(y));
-
-        // Création de la ligne
-        svg.append("path")
-            .datum(dataGrouped)
-            .attr("fill", "none")
-            .attr("stroke", color)
-            .attr("stroke-width", 2)
-            .attr("d", d3.line()
-              .x(d => x(d.year))
-              .y(d => y(d.value))
-            );
-
-        
-        // Création de la légende
-        svg.append("text")
-            .attr("x", width - 80)
-            .attr("y", 20)
-            .attr("fill", color)
-            .text("TEST");
+        }, {});
+        console.log(data1PerYear);
+        console.log(data2);
+        const data2PerYear = data2.reduce((acc, d) => {
+            if (!acc[d.year]) {
+                acc[d.year] = {};
+            }
+            if (!acc[d.year][d.location]) {
+                acc[d.year][d.location] = {
+                    country: d.location
+                };
+            }
+            // add d.type_meat to the object
+            if (!acc[d.year][d.location][d.type_meat]) {
+                acc[d.year][d.location][d.type_meat] = {
+                    value: 0
+                };
+            }
+            console.log(d);
+            acc[d.year][d.location][d.type_meat].value = d.measure == "THND_TONNE" ? d.value*1000 : d.value;
+            return acc;
+        }, {});
+        console.log(data2PerYear);
+        // Cross data1 and data2
+        Object.keys(data1PerYear).forEach(year => {
+            Object.keys(data2PerYear[year]).forEach(country => {
+                const countryData = data2PerYear[year][country];
+                const data1Data = data1PerYear[year];
+                data.push({
+                    country: countryData.country,
+                    year: year,
+                    beef_price: data1Data.beef_price,
+                    chicken_price: data1Data.chicken_price,
+                    lamb_price: data1Data.lamb_price,
+                    pork_price: data1Data.pork_price,
+                    salmon_price: data1Data.salmon_price,
+                });
+            });
+        });
+        console.log(data);
+        return data;
     }
 
     function chart2() {
@@ -412,11 +598,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // Gère les données et la couleur en fonction du mode
         if (mode == "PRODUCTION") {
             color = COLOR_PRODUCTION;
+            selectedColor = SELECTED_COLOR_PRODUCTION;
         } else if (mode == "PRICE") {
             color = COLOR_PRICE;
+            selectedColor = SELECTED_COLOR_PRICE;
         } else {
             color = COLOR_CONSUMPTION;
+            selectedColor = SELECTED_COLOR_CONSUMPTION;
         }
+
+        document.documentElement.style.setProperty('--bar-color', color);
+        document.documentElement.style.setProperty('--bar-hover-color', color);
 
         // Mets à jour tous les graphiques
         chartMap();
