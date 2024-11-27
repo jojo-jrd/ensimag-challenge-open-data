@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Gestion du mode
         let data = mode === "CONSUMPTION"
-            ? dataConsumption.filter(c => c.location === code)
+            ? dataConsumption.filter(c => c.location === code && c.measure === "THND_TONNE")
             : dataProduction.filter(d => d.country === country);
 
         if (!data || data.length === 0) {
@@ -418,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("fill", color)
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
-                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+                .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
             })
             .on("mousemove", (event) => {
                 tooltip.style("left", `${event.pageX + 10}px`)
@@ -484,12 +484,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     
         // Dimensions
-        const containerWidth = containerNode.getBoundingClientRect().width || 800; // Default width
+        const containerWidth = containerNode.getBoundingClientRect().width || 400; // Default width
         const containerHeight = containerNode.getBoundingClientRect().height || 400; // Default height
-        const svgWidth = containerWidth * 0.95; 
-        const svgHeight = containerHeight * 0.95;
-        const radius = Math.min(svgWidth, svgHeight) / 3;
-    
+        const svgWidth = containerWidth;
+        const svgHeight = containerHeight;
+
+        const radius = Math.min(svgWidth / 2, svgHeight) / 2.5;
+
         if (containerWidth === 0 || containerHeight === 0) {
             console.error("Invalid container dimensions.");
             return;
@@ -498,7 +499,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Create SVG 
         const svg = container.append("svg")
             .attr("width", svgWidth)
-            .attr("height", svgHeight + 40); // Add extra height for the title
+            .attr("height", svgHeight); 
     
         // Titre
         const chartTitle = `${mode === "PRODUCTION" ? "Production" : "Consumption"} Distribution (${year})`;
@@ -513,7 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // Chart group 
         const chartGroup = svg.append("g")
-            .attr("transform", `translate(${svgWidth / 2}, ${(svgHeight / 2) + 20})`);
+            .attr("transform", `translate(${svgWidth / 3}, ${svgHeight / 2})`);
     
         // Couleurs
         const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -540,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("class", "arc")
             .on("mouseover", function(event, d) {
                 tooltip.style("opacity", 1)
-                    .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
+                .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
             })
             .on("mousemove", function(event) {
                 tooltip.style("left", `${event.pageX + 10}px`)
@@ -555,28 +556,28 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("fill", d => color(d.data.country));
     
         // Légende
-        const legendContainer = chartGroup.append("g")
-            .attr("transform", `translate(${radius + 50}, ${-radius})`);
-    
-        const legend = legendContainer.selectAll(".legend")
+        const legendGroup = svg.append("g")
+            .attr("transform", `translate(${svgWidth / 2 + radius}, ${svgHeight / 2 - (topCountries.length * 15) / 2})`);
+
+        const legend = legendGroup.selectAll(".legend")
             .data(topCountries)
             .enter()
             .append("g")
             .attr("class", "legend")
-            .attr("transform", (d, i) => `translate(0, ${i * 25})`);
-    
+            .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
         legend.append("rect")
             .attr("x", 0)
             .attr("y", 0)
             .attr("width", 12)
             .attr("height", 12)
             .attr("fill", d => color(d.country));
-    
+
         legend.append("text")
             .attr("x", 20)
             .attr("y", 10)
+            .attr("dy", "0.35em")
             .style("font-size", "12px")
-            .style("font-family", "Arial, sans-serif")
             .text(d => `${d.country}`);
     }    
     

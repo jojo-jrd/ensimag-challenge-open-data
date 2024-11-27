@@ -531,11 +531,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         // Dimensions
-        const containerWidth = containerNode.getBoundingClientRect().width || 800; // Default width
+        const containerWidth = containerNode.getBoundingClientRect().width || 400; // Default width
         const containerHeight = containerNode.getBoundingClientRect().height || 400; // Default height
-        const svgWidth = containerWidth * 0.95; 
-        const svgHeight = containerHeight * 0.95;
-        const radius = Math.min(svgWidth, svgHeight) / 3;
+        const svgWidth = containerWidth * 0.95;
+        const svgHeight = containerHeight * 0.85; 
+        const radius = Math.min(svgWidth, svgHeight) / 3.5; 
 
         if (containerWidth === 0 || containerHeight === 0) {
             console.error("Invalid container dimensions.");
@@ -575,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Chart group 
         const chartGroup = svg.append("g")
-            .attr("transform", `translate(${svgWidth / 2}, ${(svgHeight / 2) + 20})`);
+        .attr("transform", `translate(${svgWidth * 0.3}, ${(svgHeight / 2) + 20})`);
 
         // Couleurs
         const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -624,7 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Légende
         const legend = svg.append("g")
-        .attr("transform", `translate(${svgWidth * 0.75}, 50)`);
+        .attr("transform", `translate(${svgWidth / 2 + radius - 20}, ${svgHeight / 2 - (pieData.length * 10) / 2})`);
 
         const legendItems = legend.selectAll(".legend-item")
         .data(pieData)
@@ -645,6 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .attr("y", 10)
         .style("font-size", "12px")
         .style("font-family", "Arial, sans-serif")
+        .style("text-anchor", "start")
         .text(d => `${d.type}`);
 
 
