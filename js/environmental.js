@@ -1,4 +1,5 @@
-import {initListenersFilters, initFilters} from './filters.js'
+import {initListenersFilters, initFilters} from './filters.js';
+import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
 
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_CONSUMPTION_EMISSION = "#4034f8";
@@ -230,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     function chart1() {
         // Récupérer le pays sélectionné
-        const country = getLastCountryAdded();
+        const country = getLastCountryAdded(filters);
         if (!country) {
             d3.select("#graph1").html("Select a country");
             return;
@@ -394,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function chartPie() {
         // Récupérer le pays 
-        const country = getLastCountryAdded();
+        const country = getLastCountryAdded(filters);
         if(country == null) {
             d3.select("#pieChart").html("Select a country");
             return;
@@ -642,21 +643,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Hide tooltip when leaving the container
         container.on("mouseleave", () => tooltip.style("opacity", 0));
-    }
-
-
-    // Fonction pour exclure les regroupements
-    function isRegionOrGlobal(name) {
-        const regionKeywords = ["Europe", "World", "America", "Africa", "Asia", "FAO"];
-        return regionKeywords.some(keyword => name.includes(keyword));
-    }
-
-    // Récupérer le dernier pays sélectionné
-    function getLastCountryAdded() {
-        if (filters['country'] && filters['country'].length > 0) {
-            return filters['country'][filters['country'].length - 1];
-        }
-        return null; 
     }
 
     // Récupérer la viande sélectionnée
