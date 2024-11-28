@@ -137,9 +137,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
             const tooltip = d3.select("#tooltip");
-            // Variables pour stocker des références aux lignes de ticks
-            let consumptionLines = [];
-            let priceLines = [];
 
             // Barres pour la consommation
             svg.selectAll(".bar-conso")
@@ -153,21 +150,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 .attr("height", d => height - yRight(d.conso_poisson))
                 .attr("fill", animalColors[animal][1])
                 .on("mouseover", function(event, d) {
-
-                    // Afficher les lignes de ticks pour la consommation
-                    const tickValue = d.conso_poisson;
-                    const line = svg.append("line")
-                        .attr("x1", 0)
-                        .attr("y1", yRight(tickValue))
-                        .attr("x2", width)
-                        .attr("y2", yRight(tickValue))
-                        .attr("stroke", "#000000")
-                        .attr("stroke-dasharray", "5,5")
-                        .attr("stroke-width", 1);
-                    
-                    // Ajouter la ligne à la liste pour pouvoir la supprimer plus tard
-                    consumptionLines.push(line);
-
                     tooltip.transition().duration(200).style("opacity", .9);
                     tooltip.html(`Consommation: ${d.conso_poisson} kg/hab<br/>Année: ${d.année}`)
                         .style("left", (event.pageX - 550) + "px")
@@ -179,9 +161,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         .attr("stroke-width", 2); // Épaisseur du contour
                 })
                 .on("mouseout", function() {
-                    // Supprimer les lignes de ticks pour la consommation
-                    consumptionLines.forEach(line => line.remove());
-                    consumptionLines = []; // Réinitialiser le tableau
                     tooltip.transition().duration(500).style("opacity", 0);
                     
                     // Retirer le contour
@@ -202,21 +181,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 .attr("height", d => height - yRight2(d.prix_moy))
                 .attr("fill", animalColors[animal][2])
                 .on("mouseover", function(event, d) {
-
-                    const tickValue = d.prix_moy;
-                    const line = svg.append("line")
-                        .attr("x1", 0)
-                        .attr("y1", yRight2(tickValue))
-                        .attr("x2", width)
-                        .attr("y2", yRight2(tickValue))
-                        .attr("stroke", "#000000")
-                        .attr("stroke-dasharray", "5,5")
-                        .attr("stroke-width", 0.5);
-                    
-                    // Ajouter la ligne à la liste pour pouvoir la supprimer plus tard
-                    priceLines.push(line);
-            
-
                     tooltip.transition().duration(200).style("opacity", .9);
                     tooltip.html(`Consommation: ${d.conso_poisson} kg/hab<br/>Année: ${d.année}`)
                         .style("left", (event.pageX - 550) + "px")
@@ -228,9 +192,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         .attr("stroke-width", 2); // Épaisseur du contour
                 })
                 .on("mouseout", function() {
-
-                    priceLines.forEach(line => line.remove());
-                    priceLines = []; // Réinitialiser le tableau
                     tooltip.transition().duration(500).style("opacity", 0);
                     
                     // Retirer le contour
@@ -313,9 +274,27 @@ document.addEventListener('DOMContentLoaded', function () {
             legend.append("text")
                 .attr("x", 355) // Décalage horizontal
                 .attr("y", 10)
-                .text("Prix Moyen (indice)")
+                .text("Prix Moyen (€)")
                 .style("font-size", "12px")
                 .attr("fill", animalColors[animal][2]);
+
+            const yRightAxis = svg.append("g")
+    .attr("transform", `translate(${width},0)`)
+    .call(d3.axisRight(yRight))  // Axe pour la consommation de poisson
+    .attr("stroke", animalColors[animal][1]);
+                // Récupérer les ticks de l'axe de la consommation de poisson (yRight)
+const consumptionTicks = yRightAxis.selectAll(".tick");
+
+consumptionTicks.each(function(d) {
+    svg.append("line")
+        .attr("x1", 0)
+        .attr("y1", yRight(d))
+        .attr("x2", width)
+        .attr("y2", yRight(d))
+        .attr("stroke", "#000000")
+        .attr("stroke-dasharray", "5,5")
+        .attr("stroke-width", 0.5);
+});
 
 
 
