@@ -424,7 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("fill", color)
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
-                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()} tonnes CO2`);
             })
             .on("mousemove", (event) => {
                 tooltip.style("left", `${event.pageX + 10}px`)
@@ -655,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const totalEmissions = d3.sum(pieData, e => e.value);
             const percentage = ((d.data.value / totalEmissions) * 100).toFixed(2);
             tooltip.style("opacity", 1)
-                .html(`<strong>${d.data.type}</strong><br>Total Emissions: ${d.data.value.toLocaleString()} kg CO₂e<br>Percentage: ${percentage}%`);
+                .html(`<strong>${d.data.type}</strong><br>Total Emissions: ${d.data.value.toLocaleString()} tonnes CO2<br>Percentage: ${percentage}%`);
         })
         .on("mousemove", function (event) {
             tooltip.style("left", (event.pageX + 10) + "px")

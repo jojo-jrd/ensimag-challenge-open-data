@@ -462,8 +462,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("r", 4)
             .attr("fill", color)
             .on("mouseover", (event, d) => {
+                const measure = mode === "PRICE" ? "euros" : "tonnes"; 
                 tooltip.style("opacity", 1)
-                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()} ${measure}`);
             })
             .on("mousemove", (event) => {
                 tooltip.style("left", `${event.pageX + 10}px`)
@@ -595,7 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("class", "arc")
             .on("mouseover", function(event, d) {
                 tooltip.style("opacity", 1)
-                .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()}<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
+                .html(`<strong>${d.data.country}</strong><br>Value: ${d.data.value.toLocaleString()} tonnes<br>Percentage: ${((d.data.value / totalValue) * 100).toFixed(2)}%`);
             })
             .on("mousemove", function(event) {
                 tooltip.style("left", `${event.pageX + 10}px`)
