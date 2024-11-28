@@ -43,12 +43,176 @@
     </header>
 
     <!-- Section Rapport -->
-    <div class="bg-purple-300 text-white h-128 text-center py-10">
-        <h1 class="text-3xl font-bold mb-4">Rapport</h1>
-        <div class="rapport-content bg-white text-black p-5 rounded mx-auto w-1/2">
-            <p>Contenu du rapport ici.</p>
+    <section class="text-gray-800 py-16">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl font-extrabold text-center mb-10">Rapport</h1>
+
+            <!-- Card wrapper -->
+            <div class="rapport-content bg-gray-900 rounded-lg shadow-lg p-8 md:p-12 text-gray-300 space-y-10">
+
+                <!-- Team Members -->
+                <div>
+                    <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">Membres de l'équipe</h2>
+                    <ul class="space-y-2 list-disc list-inside">
+                        <li class="marker:text-green-500">Jordan Josserand</li>
+                        <li class="marker:text-green-500">Clement Correnoz</li>
+                        <li class="marker:text-green-500">Florian Cunsolo</li>
+                        <li class="marker:text-green-500">Wafi Grissi</li>
+                        <li class="marker:text-green-500">Hippolyte Bergeon</li>
+                    </ul>
+                </div>
+
+                <!-- Data Sources -->
+                <div>
+                    <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">Sources de données</h2>
+                    <p class="mb-6">
+                        De nombreuses données ont été utilisées pour réaliser de multiples corrélations :
+                    </p>
+                    <ul class="space-y-4 list-disc list-inside">
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/kianwee/meat-prices-19902020" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Prix de la viande dans le monde par mois entre 1990 et 2020
+                            </a>
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/willianoliveiragibin/meat-and-dairy-production" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Production de viande par pays entre 1961 et 2022
+                            </a>
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/vagifa/meatconsumption/data" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Consommation de viande par pays entre 1990 et 2026
+                            </a>
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/amandaroseknudsen/foodproductemissions" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Émissions de CO2 par nourriture
+                            </a>
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://github.com/johan/world.geo.json" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Carte du monde
+                            </a> 
+                            : Fichier en GeoJSON permettant d'afficher la carte du monde dans un graphique.
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/sazidthe1/world-population-data" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Population par pays par décennie
+                            </a> 
+                            : Données utilisées en correspondance avec la consommation pour analyser la consommation d'un pays.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Traitements des données -->
+                <div>
+                    <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">Traitements des données</h2>
+                    <p class="mb-6"></p>
+                        Le choix a été fait de garder presque tous les fichiers CSV de base sans changement. Nous avons fait ce choix car dans le projet, nous avons changer de stratégie assez régulièrement sur l'affichage de données en utilisant divers données.
+                        Pour une maintenabilité dans le futur, il est donc mieux de laisser les fichier comme ils sont actuellemenent. Seul le fichier des émissions de la nourriture a été traité pour laisserpour ne garder uniquement les viandes.
+                        <br><br>
+                        Des traitements ont néanmoins été éfféctué en JavaScript, pour enlever des données superflus comme des zones géographiques dans le fichier de données de consommation (Europe, Asie...).
+                    </p>
+                </div>
+
+                <!-- Aspects générales -->
+                <div>
+                    <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">Aspects générales</h2>
+                    <p class="mb-6">
+                        Dans les deux pages de visualisation, de nombreux mode permettant l'affichage de données sont présents :
+                    </p>
+                    <ul class="space-y-4 list-disc list-inside mb-6">
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Consommation</span> : affichage des données sur la consommation des pays
+                        </li>
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Production</span> : affichage des donnéessur la production des pays
+                        </li>
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Prix</span> : affichage des données sur le prix des viandes et l'impact générale sur le monde
+                        </li>
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Emissions liés à la consommation</span> : affichage des données d'émission de CO2 lors de la consommation de viande par pays.
+                        </li>
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Emissions liés à la production</span> : affichage des données d'émission de CO2 lors de la production de viande par pays.
+                        </li>
+                    </ul>
+                    <p class="mb-6">
+                        De plus, pour permettre aux utilisateurs de personnaliser leurs recherches, des options sont présentes afin de faciliter leurs filtrages.
+                    </p>
+                    <ul class="space-y-4 list-disc list-inside mb-6">
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Choix de l'année</span> : affichage des données en fonction d'une année précise
+                        </li>
+                        <li class="marker:text-green-500">
+                            <span class="font-bold">Ajout de filtres :</span>
+                            <ul class="space-y-4 list-disc list-inside pl-6">
+                                <li class="marker:text-blue-500">
+                                    <span class="font-bold">Pays</span> : permet d'afficher un pays ou plusieurs pays en fonction du type de graphique.
+                                </li>
+                                <li class="marker:text-blue-500">
+                                    <span class="font-bold">Viande</span> : permet d'afficher les données en fonction des types de viande (fonctionne uniquement pour les données de consommation)
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>                    
+                </div>
+                <!-- Justification des modalités de visualisation choisies -->
+                <div>
+                    <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-6">Modalités de visualisation</h2>
+                
+                    <div class="space-y-8">
+                        <!-- Section Carte -->
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-100">Carte</h3>
+                            <p class="text-gray-400 mt-2">
+                                TODO par Flo
+                            </p>
+                        </div>
+                
+                        <!-- Section Graphique de Zone -->
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-100">Graphique de Zone</h3>
+                            <p class="text-gray-400 mt-2">
+                                TODO par Wafi
+                            </p>
+                        </div>
+                
+                        <!-- Section Graphique Courbe -->
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-100">Graphique Courbe</h3>
+                            <p class="text-gray-400 mt-2">
+                                TODO par Wafi
+                            </p>
+                        </div>
+                
+                        <!-- Section Graphique Histogramme -->
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-100">Graphique Histogramme</h3>
+                            <p class="text-gray-400 mt-2">
+                                TODO par Clement
+                            </p>
+                        </div>
+                
+                        <!-- Section Graphique de la Prairie -->
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-100">Graphique de la prairie</h3>
+                            <p class="text-gray-400 mt-2">
+                                TODO par Hippolyte
+                            </p>
+                        </div>
+                    </div>
+                </div>                
+            </div>
         </div>
-    </div>
+    </section>
 
 </body>
 </html>
