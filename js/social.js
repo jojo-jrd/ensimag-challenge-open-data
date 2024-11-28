@@ -126,8 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 dp.type_meat.toLowerCase().includes(type.split('_')[0]) // Match meat type
             );
 
-            console.log("consumptionData", consumptionData);
-
             // Calculate total consumption for the meat type
             const totalConsumption = consumptionData.length > 0
                 ? d3.sum(consumptionData, dp => dp.value)
@@ -360,7 +358,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Code du pays
         let code = dataProduction.find(d => d.country === country)?.code;
         if (code == null) {
-            console.error('No code found for the country:', country);
             d3.select("#graph1").html(`No code found for the country ${country}`);
             return;
         }
@@ -371,8 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Calcul
         let data = years.map(year => {
             const d = { id: code, year }; 
-            console.log("d", d);
-            console.log("valueAccessor(d) : ", valueAccessor(d));
             return { year, value: valueAccessor(d) }; 
         });
 
@@ -380,7 +375,6 @@ document.addEventListener("DOMContentLoaded", () => {
         data = data.filter(d => d.value > 0);
 
         if (!data || data.length === 0) {
-            console.log('No data available for the selected country and mode');
             d3.select("#graph1").html("No data available for the selected country and mode");
             return;
         }
@@ -499,7 +493,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                         && (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))));
     
         if (!dataForYear || dataForYear.length === 0) {
-            console.error("No data available for the selected mode and year.");
             d3.select("#pieChart").html("No data available for the selected mode and year");
             return;
         }
@@ -518,7 +511,6 @@ document.addEventListener("DOMContentLoaded", () => {
     
         // TOP 10 (9 pays, 1 Other -cumul des autres pays-)
         const topCountries = aggregatedData.slice(0, 9);
-        console.log("topCountries", topCountries);
         const otherValue = aggregatedData.slice(9).reduce((sum, d) => sum + d.value, 0);
         if (otherValue > 0) {
             topCountries.push({ country: "Other", value: otherValue });
@@ -534,7 +526,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Node
         const containerNode = container.node();
         if (!containerNode) {
-            console.error("Container with id 'pieChart' not found.");
             return;
         }
     
@@ -547,7 +538,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const radius = Math.min(svgWidth / 2, svgHeight) / 2.5;
 
         if (containerWidth === 0 || containerHeight === 0) {
-            console.error("Invalid container dimensions.");
             return;
         }
     
@@ -938,7 +928,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (filters["meat"].length > 0) {
                     entries = entries.filter(d => filters["meat"].includes(d.type_meat));
                 }
-                console.log(location);
 
                 const country = codeToCountryMapping(location);
 
@@ -948,11 +937,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 return {
                     country: country,
-                    value: d3.sum(entries, d => d.value), // On multiplie par la population pour avoir la consommation totale
+                    value: d3.sum(entries, d => d.value*1000), // On multiplie par la population pour avoir la consommation totale
                     values: entries.map(d => {
                         return {
                             key: d.type_meat,
-                            value: d.value
+                            value: d.value*1000
                         };
                     })
                 };

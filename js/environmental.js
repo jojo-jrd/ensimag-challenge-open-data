@@ -93,12 +93,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedMeats = getSelectedMeat(filters) || [];
         const meatTypes = dataEmission.filter(e => selectedMeats.length == 0 || selectedMeats.find(meat => e.product.toLowerCase().includes(meat))).map(e => e.product.toLowerCase());
 
-        console.log("Filters :", {
-            location: d.id,
-            year: d.year || year,
-            measure: "THND_TONNE"
-        });
-
         // Filter the relevant consumption data for the country and year
         const consumptionData = dataConsumption.filter(dp =>
             dp.location === d.id &&
@@ -107,13 +101,10 @@ document.addEventListener("DOMContentLoaded", () => {
             meatTypes.find(m => m.includes(dp.type_meat.toLowerCase()))
         );
 
-        console.log("consumptionData", consumptionData);
-
         // Compute total emissions based on the meat selection
         const totalEmissions = meatTypes.reduce((sum, meat) => {
             // Match the meat type in emissions data
             const emissionEntry = dataEmission.find(e => meat == e.product.toLowerCase());
-            console.log("meat", meat);
             if (!emissionEntry) return sum; // Skip if no matching emission entry
 
             // Match the meat type in consumption data
@@ -131,8 +122,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Return the total emissions or 0 if no data is available
         return totalEmissions > 0 ? totalEmissions : 0;   
-
-        console.log("totalEmissions", totalEmissions);
     }
 
     function valueAccessor(d) {
@@ -310,7 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
             d3.select("#graph1").html("Select a country");
             return;
         }
-        console.log("country : ", country);
 
         // Récupérer la/les viande(s)
         let meat = getSelectedMeat(filters);
@@ -321,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Données du pays
         const countryData = dataProduction.find(d => d.country === country);
         if (!countryData) {
-            console.error("No production data found for the selected country");
             return;
         }
         // Code du pays
@@ -340,7 +327,6 @@ document.addEventListener("DOMContentLoaded", () => {
         data = data.filter(d => d.value > 0);
 
         if (data.length === 0) {
-            console.log("No data available for the selected country and mode");
             d3.select("#graph1").html("No data available for the selected country and mode");
             return;
         }
@@ -466,7 +452,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Pays inconnu
         if (!dataCountry) {
-            console.error(`No data found for country: ${country}`);
             d3.select("#pieChart").html("Select a country");
             return;
         }
@@ -487,7 +472,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             
                 if (!relatedConsumption) {
-                    console.error("PROB RELATED CONS: No consumption match for", emission.product, "code :", dataCountry.code);
                     d3.select("#pieChart").html(`No consumption match for ${dataCountry.code} in ${year}`);
                     return {
                         product: emission.product,
@@ -542,7 +526,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (meatEmissionData.length === 0) {
-            console.error("No valid emission data available for chart.");
             return;
         }
 
@@ -571,7 +554,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // dimensions depuis le node 
         const containerNode = container.node();
         if (!containerNode) {
-            console.error("Container with id 'pieChart' not found in the DOM.");
             return;
         }
         // Dimensions
@@ -582,7 +564,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const radius = Math.min(svgWidth, svgHeight) / 3.5; 
 
         if (containerWidth === 0 || containerHeight === 0) {
-            console.error("Invalid container dimensions.");
             return;
         }
 
@@ -928,13 +909,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 const total = d3.sum(entries, d => d.value);
                 const country = codeToCountryMapping(location);
+                const d = {
+                    id: location,
+                    year: year
+                };
 
                 if (!country) {
                     return;
                 }
                 return {
                     country: country,
-                    value: total*total_consumption
+                    value: getConsumptionEmission(d)
                 };
             }
             );
