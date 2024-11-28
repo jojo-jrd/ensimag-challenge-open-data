@@ -58,9 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Charger les deux ou trois fichiers CSV en parallèle
         const fichier_prix = "../csv/prix-"+animal+".csv"
+        const fichier_conso = "../csv/conso-"+animal+".csv"
         Promise.all([
             d3.csv("../csv/salaires-fr.csv"),
-            d3.csv("../csv/conso-poisson.csv"),
+            d3.csv(fichier_conso),
             d3.csv(fichier_prix)
         ]).then(([salaryData, animalData, priceData]) => {
             // Préparer les données pour le graphique
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             animalData.forEach(d => {
                 d.année = +d.année;
-                d.conso_poisson = +d.conso_poisson;
+                d.conso_viande = +d.conso_viande;
             });
 
             priceData.forEach(d => {
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return {
                     année: s.année,
                     ensemble: s.ensemble,
-                    conso_poisson: animal ? animal.conso_poisson : null,
+                    conso_viande: animal ? animal.conso_viande : null,
                     prix_moy: price ? price.prix_moy : null
                 };
             });
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .range([height, 0]);
 
             const yRight = d3.scaleLinear()
-                .domain([0, d3.max(mergedData, d => d.conso_poisson)+10]) // Échelle pour la consommation
+                .domain([0, d3.max(mergedData, d => d.conso_viande)+d3.max(mergedData, d => d.conso_viande)/2]) // Échelle pour la consommation
                 .range([height, 0]);
 
             const yRight2 = d3.scaleLinear()
@@ -148,14 +149,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 .append("rect")
                 .attr("class", "bar")
                 .attr("x", d => x(d.année) - 10) // Ajuster la position horizontale
-                .attr("y", d => yRight(d.conso_poisson))
+                .attr("y", d => yRight(d.conso_viande))
                 .attr("width", 10) // Largeur des barres
-                .attr("height", d => height - yRight(d.conso_poisson))
+                .attr("height", d => height - yRight(d.conso_viande))
                 .attr("fill", animalColors[animal][1])
                 .on("mouseover", function(event, d) {
 
                     // Afficher les lignes de ticks pour la consommation
-                    const tickValue = d.conso_poisson;
+                    const tickValue = d.conso_viande;
                     const line = svg.append("line")
                         .attr("x1", 0)
                         .attr("y1", yRight(tickValue))
@@ -169,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     consumptionLines.push(line);
 
                     tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html(`Consommation: ${d.conso_poisson} kg/hab<br/>Année: ${d.année}`)
+                    tooltip.html(`Consommation: ${d.conso_viande} kg/hab<br/>Année: ${d.année}`)
                         .style("left", (event.pageX - 550) + "px")
                         .style("top", (event.pageY - 200) + "px");
                     
