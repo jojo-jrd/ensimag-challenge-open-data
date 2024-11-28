@@ -367,16 +367,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Aggregate data by year and calculate totals
                 const dataByYear = d3.groups(data, d => d.year).map(([year, entries]) => {
                     const totalValue = selectedMeats.reduce((sum, type) => {
-                        // Get the average price for the meat type
+                        // Get all prices for the meat type
                         const prices = dataPrice.map(e => e[type]).filter(price => price != null);
-                        const avgPrice = prices.length > 0 ? d3.mean(prices) : 0;
 
                         // Calculate total consumption for the matched meat type
                         const totalConsumption = entries
                             .filter(e => e.type_meat.toLowerCase().includes(type.split('_')[0])) // Match meat type
                             .reduce((sum, e) => sum + e.value, 0);
 
-                        return sum + totalConsumption * avgPrice;
+                        // Multiply total consumption by the sum of prices
+                        const totalPrice = prices.length > 0 ? d3.sum(prices) : 0;
+
+                        return sum + totalConsumption * totalPrice;
                     }, 0);
 
                     return { year, value: totalValue};
