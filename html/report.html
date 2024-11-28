@@ -116,6 +116,26 @@
                             </a> 
                             : Données utilisées en correspondance avec la consommation pour analyser la consommation d'un pays.
                         </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.kaggle.com/datasets/sazidthe1/world-population-data" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Prix de diverses viandes en France
+                            </a> 
+                            : Données utilisées en correspondance avec la consommation pour analyser la consommation d'un pays.
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.insee.fr/fr/statistiques/2381334" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Évolution du salaire annuel net moyen des salariés à temps complet
+                            </a> 
+                            : Données utilisées en correspondance les données de prix des viandes pour étudier d'éventuelles disparités.
+                        </li>
+                        <li class="marker:text-green-500">
+                            <a href="https://www.insee.fr/fr/statistiques/series/102342213" target="_blank" 
+                            class="text-blue-400 hover:underline">
+                                Indices annuels des prix à la consommation des diverses viandes
+                            </a> 
+                        </li>
                     </ul>
                 </div>
 
@@ -126,7 +146,7 @@
                         Le choix a été fait de garder presque tous les fichiers CSV de base sans changement. Nous avons fait ce choix car dans le projet, nous avons changer de stratégie assez régulièrement sur l'affichage de données en utilisant divers données.
                         Pour une maintenabilité dans le futur, il est donc mieux de laisser les fichier comme ils sont actuellemenent. Seul le fichier des émissions de la nourriture a été traité pour laisserpour ne garder uniquement les viandes.
                         <br><br>
-                        Des traitements ont néanmoins été éfféctué en JavaScript, pour enlever des données superflus comme des zones géographiques dans le fichier de données de consommation (Europe, Asie...).
+                        Des traitements ont néanmoins été éfféctué en JavaScript, pour enlever des données superflues comme des zones géographiques dans le fichier de données de consommation (Europe, Asie...).
                     </p>
                 </div>
 
@@ -240,9 +260,46 @@
                 
                         <!-- Section Graphique de la Prairie -->
                         <div>
-                            <h3 class="text-xl font-bold text-gray-100">Graphique de la prairie</h3>
-                            <p class="text-gray-400 mt-2">
-                                TODO par Hippolyte
+                            <h2 class="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">La Prairie</h2>
+                            
+                            <p class="mb-6">
+                                La page d'accueil présente une visualisation originale sous forme de prairie stylisée, alliant une approche ludique 
+                                à des données sérieuses sur l'industrie de la viande. Cette interface se compose de deux éléments principaux :
+                            </p>
+                        
+                            <h3 class="text-xl font-semibold mb-3">1. Une scène interactive</h3>
+                            <ul class="space-y-4 list-disc list-inside mb-6">
+                                <li class="marker:text-green-500">
+                                    Représentation colorée et enfantine d'une prairie
+                                </li>
+                                <li class="marker:text-green-500">
+                                    Différents animaux cliquables représentant les principales catégories de viande (bœuf, poulet, porc, mouton et poisson)
+                                </li>
+                                <li class="marker:text-green-500">
+                                    Design accessible et intuitif pour tous les utilisateurs
+                                </li>
+                            </ul>
+                        
+                            <h3 class="text-xl font-semibold mb-3">2. Graphiques combinés dynamiques</h3>
+                            <ul class="space-y-4 list-disc list-inside mb-6">
+                                <li class="marker:text-green-500">
+                                    Déclenchement à la sélection d'un animal
+                                </li>
+                                <li class="marker:text-green-500">
+                                    Analyse croisée sur 20 ans de trois indicateurs clés :
+                                    <ul class="space-y-4 list-disc list-inside pl-6">
+                                        <li class="marker:text-blue-500">L'évolution du prix de la viande spécifique</li>
+                                        <li class="marker:text-blue-500">L'évolution du salaire moyen en France</li>
+                                        <li class="marker:text-blue-500">L'évolution de la consommation de cette viande</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        
+                            <p class="mb-6">
+                                Cette visualisation permet de mettre en perspective les relations entre le pouvoir d'achat des Français, 
+                                les variations de prix des différentes viandes et leurs impacts sur les habitudes de consommation. 
+                                Cette approche multi-variables offre une compréhension plus complète des dynamiques du marché de la viande 
+                                en France sur les deux dernières décennies.
                             </p>
                         </div>
                     </div>
