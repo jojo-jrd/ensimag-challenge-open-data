@@ -63,6 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function countryToCodeMapping(countryName) {
         return dataProduction.find(d => d.country === countryName).code;
     }
+    function codeToCountryMapping(code) {
+        return dataProduction.find(d => d.code === code).country;
+    }
 
     /*
         ==========================================
@@ -839,7 +842,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getHistogramData() {
         let data;
-        console.log("mode", mode);
         if (mode == "PRODUCTIONEMISSION") {
             let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
             data = dataProduction;
@@ -852,37 +854,34 @@ document.addEventListener("DOMContentLoaded", () => {
                     value: d.value * total_production
                 };
             });
-            console.log("dataPerCountry", dataPerCountry);
             // Sort the data by value
             dataPerCountry.sort((a, b) => b.value - a.value);
 
 
-            const selectedCountries = filters["country"];
+            const selectedCountries = filters["country"] || [];
+            const selectedData = dataPerCountry.filter(d => selectedCountries.includes(d.country));
+            const topSelectedData = selectedData.sort((a, b) => b.value - a.value).slice(0, 7);
 
             if (selectedCountries.length >= 7) {
-                // Only keep the selected countries in dataPerCountry
-                const TopSelected = dataPerCountry.filter(d => selectedCountries.includes(d.country)).slice(0, 7);
                 return {
-                    dataPerYear: TopSelected,
+                    dataPerYear: topSelectedData,
                     selectedCountries: selectedCountries,
                     isInRange: data.length > 0,
                     mode: "PRODUCTION"
                 };
             }
 
-            const numberOfSelectedNotInTop = selectedCountries.filter(d => !dataPerCountry.map(d => d.country).includes(d));
-
-            // On fait en sorte de garder les pays séléctionnés dans le top 7
-            const topCountries = dataPerCountry.slice(0, 7 - numberOfSelectedNotInTop.length);
-            for (let country of selectedCountries) {
-                const countryData = dataPerCountry.find(d => d.country === country);
-                if (countryData) {
-                    topCountries.push(countryData);
-                }
-            }
+            // Trier par valeur pour obtenir les 7 plus grandes valeurs
+            const topData = dataPerCountry
+                .filter(d => !selectedCountries.includes(d.country)) // Exclure les pays déjà sélectionnés
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 7 - selectedData.length); // Récupérer le reste des meilleurs pays
+            
+            // Combiner les pays sélectionnés et les meilleurs pays
+            const dataPerYear = topSelectedData.concat(topData).sort((a, b) => b.value - a.value);
 
             return {
-                dataPerYear: topCountries,
+                dataPerYear: dataPerYear,
                 selectedCountries: selectedCountries,
                 isInRange: data.length > 0,
                 mode: "PRODUCTION"
@@ -905,6 +904,9 @@ document.addEventListener("DOMContentLoaded", () => {
             data = data.filter(d => d.year == year && d.measure == "KG_CAP");
             console.log("data", data);
             const dataPerCountry = d3.groups(data, d => d.location).map(([location, entries]) => {
+                if (filters["meat"].length > 0) {
+                    entries = entries.filter(d => filters["meat"].includes(d.type_meat));
+                }
                 const total = d3.sum(entries, d => d.value);
                 const population = dataPop.find(d => d.code == location);
                 if (!population) {
@@ -914,20 +916,42 @@ document.addEventListener("DOMContentLoaded", () => {
                 const popYear = Math.floor(year / 10) * 10;
                 const pop = population[`population_${popYear}`];
                 return {
-                    country: location,
+                    country: codeToCountryMapping(location),
                     value: total*pop/1000*total_consumption
                 };
             }
             );
-            console.log("dataPerCountry", dataPerCountry);
             // Sort the data by value
             dataPerCountry.sort((a, b) => b.value - a.value);
-            // Only keep the top 7 countries
-            const topCountries = dataPerCountry.slice(0, 7);
+            //On vire les undefined
+            ;const dataPerCountryFiltered = dataPerCountry.filter(d => d !== undefined);
+            console.log("dataPerCountry", dataPerCountryFiltered);
+
+            const selectedCountries = filters["country"] || [];
+            const selectedData = dataPerCountryFiltered.filter(d => selectedCountries.includes(d.country));
+            const topSelectedData = selectedData.sort((a, b) => b.value - a.value).slice(0, 7);
+
+            if (selectedCountries.length >= 7) {
+                return {
+                    dataPerYear: topSelectedData,
+                    selectedCountries: selectedCountries,
+                    isInRange: data.length > 0,
+                    mode: "CONSUMPTION"
+                };
+            }
+
+            // Trier par valeur pour obtenir les 7 plus grandes valeurs
+            const topData = dataPerCountryFiltered
+                .filter(d => !selectedCountries.includes(d.country)) // Exclure les pays déjà sélectionnés
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 7 - selectedData.length); // Récupérer le reste des meilleurs pays
+            
+            // Combiner les pays sélectionnés et les meilleurs pays
+            const dataPerYear = topSelectedData.concat(topData).sort((a, b) => b.value - a.value);
 
             return {
-                dataPerYear: topCountries,
-                selectedCountries: [],
+                dataPerYear: dataPerYear,
+                selectedCountries: selectedCountries,
                 isInRange: data.length > 0,
                 mode: "CONSUMPTION"
             };

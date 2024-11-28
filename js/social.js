@@ -4,7 +4,7 @@ import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
 const COLOR_PRODUCTION = "#e7a30c",
     SELECTED_COLOR_PRODUCTION = "#623e03",
     COLOR_CONSUMPTION = "#ae13bb",
-    SELECTED_COLOR_CONSUMPTION = "#d13ed1",
+    SELECTED_COLOR_CONSUMPTION = "#4f0657",
     COLOR_PRICE = "#45b707",
     SELECTED_COLOR_PRICE = "#6ed93a";
 
@@ -65,6 +65,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function countryToCodeMapping(countryName) {
         return dataProduction.find(d => d.country === countryName).code;
+    }
+
+    function codeToCountryMapping(code) {
+        return dataProduction.find(d => d.code === code).country;
     }
 
     /*
@@ -720,7 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 value = value.toFixed(2);
             }
-            tooltip.html(`${value} ` + (mode === "PRICE" ? "€" : "tonnes"))
+            tooltip.html(`${value} ` + (mode === "PRICE" ? "€/kg" : "tonnes"))
                 .style("left", (event.pageX + 5) + "px")
                 .style("top", (event.pageY - 28) + "px")
                 .style("border", "1px solid " + color)
@@ -905,8 +909,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
                 const popYear = Math.floor(year / 10) * 10;
                 const pop = population[`population_${popYear}`];
+                // Si length de filters["meat"] est supérieur à 0, on filtre les données
+                if (filters["meat"].length > 0) {
+                    entries = entries.filter(d => filters["meat"].includes(d.type_meat));
+                }
                 return {
-                    country: location,
+                    country: codeToCountryMapping(location),
                     value: d3.sum(entries, d => d.value*pop/1000), // On multiplie par la population pour avoir la consommation totale
                     values: entries.map(d => {
                         return {
@@ -918,10 +926,33 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             // On trie les données par valeur et on garde les 7 premières valeurs
             const topData = dataPerYear.filter(d => d).sort((a, b) => b.value - a.value).slice(0, 7);
+
+            const selectedCountries = filters["country"] || [];
+            const selectedData = topData.filter(d => selectedCountries.includes(d.country));
+            const topSelectedData = selectedData.sort((a, b) => b.value - a.value).slice(0, 7);
+
+            if (selectedData.length >= 7) {
+                return {
+                    dataPerYear: topSelectedData,
+                    selectedCountries: selectedCountries,
+                    isInRange: true,
+                    mode: "CONSUMPTION"
+                };
+            }
+
+            // Combiner les pays sélectionnés et les meilleurs pays pour avoir 7 pays et avoir tous les pays sélectionnés
+            const topData2 = topData
+                .filter(d => !selectedCountries.includes(d.country)) // Exclure les pays
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 7 - selectedData.length); // Récupérer le reste des meilleurs pays
+
+            // Combiner les pays sélectionnés et les meilleurs pays
+            const dataPerYearFinal = topSelectedData.concat(topData2).sort((a, b) => b.value - a.value);
+
             // On retourne les données triées
             return {
-                dataPerYear: topData,
-                selectedCountries: [],
+                dataPerYear: dataPerYearFinal,
+                selectedCountries: selectedCountries,
                 isInRange: true,
                 mode: "CONSUMPTION"
             };
