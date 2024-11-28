@@ -179,7 +179,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("y", legendHeight + 12) 
             .attr("text-anchor", "middle")
             .style("font-size", `${Math.max(8, width * 0.015)}px`) 
-            .text(d => d3.format(",.0f")(d));
+            .text(d => {
+                return d3.format(",.0f")(d / 1e6).replace(/,/g, ' ') + "M";
+            }); 
     }       
     
     function handleMouseOver(event, d) {
