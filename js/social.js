@@ -1,5 +1,5 @@
 import {initListenersFilters, initFilters} from './filters.js';
-import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
+import {isRegionOrGlobal, getLastCountryAdded, getSelectedMeat} from './utils.js';
 
 const COLOR_PRODUCTION = "#e7a30c",
     SELECTED_COLOR_PRODUCTION = "#623e03",
@@ -107,9 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
             const avgConsumption = consumptionData.length > 0
-                ? d3.sum(consumptionData, dp => dp.value)
+                ? d3.mean(consumptionData, dp => dp.value)
                 : "Donnée indisponible";
-            const finalvalue = overallAverage*avgConsumption*1000
+            const finalvalue = overallAverage*avgConsumption
             return finalvalue ? finalvalue : 0;
         }
         return 0;
@@ -203,9 +203,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
                 const avgConsumption = consumptionData.length > 0
-                    ? d3.sum(consumptionData, dp => dp.value)
+                    ? d3.mean(consumptionData, dp => dp.value)
                     : "Donnée indisponible";
-                const finalvalue = overallAverage*avgConsumption*1000
+                const finalvalue = overallAverage*avgConsumption
                 infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
             }
 
@@ -340,13 +340,67 @@ document.addEventListener("DOMContentLoaded", () => {
         let code = dataProduction.find(d => d.country === country).code;
         if(code == null) {
             console.error('No code found for the country : ', country);
+            d3.select("#graph1").html(`No code found for the country ${country}`);
             return;
         }
 
+        // Récupérer la/les viande(s)
+        let meat = getSelectedMeat(filters);
+        if (!meat || meat.length === 0) {
+            // Default to all meat types
+            meat = dataConsumption.map(d => d.type_meat.toLowerCase());
+        }
+
         // Gestion du mode
-        let data = mode === "CONSUMPTION"
-            ? dataConsumption.filter(c => c.location === code && c.measure === "THND_TONNE")
-            : dataProduction.filter(d => d.country === country);
+        let data;
+        if (mode === "PRODUCTION") {
+            // Production doesn't depend on meat type
+            data = dataProduction.filter(d => d.country === country);
+        } else if (mode === "CONSUMPTION" || mode === "PRICE") {
+            // Filter consumption data for the selected meats
+            data = dataConsumption.filter(d => 
+                d.location === code && 
+                d.measure === "THND_TONNE" && 
+                (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))
+            );
+
+            if(mode === "PRICE") {
+                // Handle meat selection or default to all meats
+                const meatPrices = ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'];
+                const selectedMeats = meat && meat.length > 0
+                    ? meatPrices.filter(type => meat.some(m => type.toLowerCase().includes(m.toLowerCase())))
+                    : meatPrices;
+
+                // Aggregate data by year and calculate totals
+                const dataByYear = d3.groups(data, d => d.year).map(([year, entries]) => {
+                    const totalValue = selectedMeats.reduce((sum, type) => {
+                        // Get all prices for the meat type
+                        const prices = dataPrice.map(e => e[type]).filter(price => price != null);
+
+                        // Calculate total consumption for the matched meat type
+                        const totalConsumption = entries
+                            .filter(e => e.type_meat.toLowerCase().includes(type.split('_')[0])) // Match meat type
+                            .reduce((sum, e) => sum + e.value, 0);
+
+                        // Multiply total consumption by the sum of prices
+                        const totalPrice = prices.length > 0 ? d3.sum(prices) : 0;
+
+                        return sum + totalConsumption * totalPrice;
+                    }, 0);
+
+                    return { year, value: totalValue};
+                });
+
+                if (!dataByYear || dataByYear.length === 0) {
+                    console.log("No data computed for the selected mode.");
+                    d3.select("#chart1").html("No data computed for the selected mode.")
+                    data = [];
+                    return;
+                }
+
+                data = dataByYear;
+            }
+        }
 
         if (!data || data.length === 0) {
             console.log('No data available for the selected country and mode');
@@ -463,25 +517,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function chartPie() {
+        // Récupérer la/les viande(s)
+        const meat = getSelectedMeat(filters) || [];
+
         // Gestion du dataset selon le mode
         const dataForYear = mode === "PRODUCTION"
             ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
-            : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"));
+            : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), 
+                                    dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"
+                                        && (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))));
     
         if (!dataForYear || dataForYear.length === 0) {
             console.error("No data available for the selected mode and year.");
             d3.select("#pieChart").html("No data available for the selected mode and year");
             return;
         }
+
+        // Mapping code, name
+        const codeToCountryName = new Map(dataProduction.map(d => [d.code, d.country]));
     
         // Aggrégation par pays
-        const aggregatedData = d3.groups(dataForYear, d => d.country || d.location)
-            .map(([country, entries]) => ({
-                country,
+        const aggregatedData = d3.groups(dataForYear, d => mode === "PRODUCTION" ? d.country : d.location)
+            .map(([key, entries]) => ({
+                country: codeToCountryName.get(key) || key,
                 value: d3.sum(entries, d => d.value)
             }))
             .filter(d => d.value > 0)
             .sort((a, b) => b.value - a.value);
+
     
         // TOP 10 (9 pays, 1 Other -cumul des autres pays-)
         const topCountries = aggregatedData.slice(0, 9);
@@ -601,7 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("font-size", "12px")
             .text(d => `${d.country}`);
     }    
-
+    
     function chartHistogram() {
         const data = getHistogramData();
         const dataPerYear = data.dataPerYear;
@@ -958,10 +1021,9 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         }
     }
-    
-    function filterRealCountries(consumptionData, productionData) {
+    function filterRealCountries(productionData, consumptionData) {
         // Vrais pays dans production data
-        const validCountryCodes = new Set(productionData.map(d => d.code));
+        const validCountryCodes = new Set(productionData.map(d => d.code)); // line 606
     
         // Separate invalid codes
         const invalidCodes = new Set();
@@ -996,9 +1058,6 @@ document.addEventListener("DOMContentLoaded", () => {
             color = COLOR_CONSUMPTION;
             selectedColor = SELECTED_COLOR_CONSUMPTION;
         }
-
-        document.documentElement.style.setProperty('--bar-color', color);
-        document.documentElement.style.setProperty('--bar-hover-color', color);
 
         // Mets à jour tous les graphiques
         chartMap();

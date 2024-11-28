@@ -1,5 +1,5 @@
 import {initListenersFilters, initFilters} from './filters.js';
-import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
+import {isRegionOrGlobal, getLastCountryAdded, getSelectedMeat} from './utils.js';
 
 const COLOR_PRODUCTION_EMISSION = "#dc05ca",
     COLOR_SELECTED_PRODUCTION_EMISSION = "#3d0035",
@@ -261,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("country : ", country);
 
         // Récupérer la/les viande(s)
-        let meat = getSelectedMeat();
+        let meat = getSelectedMeat(filters);
         if(meat == null) {
             meat = dataEmission.map(e => e.product.toLowerCase()); // Default
         }
@@ -431,7 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Récupérer la/les viande(s)
-        const meat = getSelectedMeat();
+        const meat = getSelectedMeat(filters);
 
         // Filtrer par rapport à l'année choisie, exclure les lignes ne correspondant pas à des pays
         const productionDataForYear = dataProduction
@@ -956,11 +956,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 mode: "CONSUMPTION"
             };
         }
-    }
-
-    // Récupérer la viande sélectionnée
-    function getSelectedMeat() {
-        return filters['meat']?.length ? filters['meat'] : null;
     }
 
     function updateData() {

@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viande dans le monde</title>
     <link href="./../css/tailwind.css" rel="stylesheet" />
-
+    <script src="./../js/lib/d3.min.js"></script>
     <script src="./../js/common.js"></script>
     <script src="./../js/meadow.js"></script>
     <link href="https://cdn.jsdelivr.net/gh/yesiamrocks/cssanimation.io@1.0.3/cssanimation.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./../css/pricetags.css">
     <link rel="stylesheet" href="./../css/meadow.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,7 +60,19 @@
         <div class="terre h-72"></div> -->
 
         <div class="content-container">
-            <img src="../images/contentSpace.png" alt="Content Space" class="content-image">
+            <div class="content-box">
+                <div class="animals-container">
+                    <img class="animal hen" src="../images/svg/hen.svg" alt="Poule" />
+                    <img class="animal cow" src="../images/svg/cow.svg" alt="Vache" />
+                    <img class="animal saumon" src="../images/svg/salmon.svg" alt="Saumon" />
+                    <img class="animal pig" src="../images/svg/cochongre.svg" alt="Cochon" />
+                    <img class="animal sheep" src="../images/svg/moutongre.svg" alt="Mouton" />
+                </div>
+                <span class="price-tag price-tag--two-lines">
+                    <span class="price-tag__main">$29.99</span>
+                    <span>20% off</span>
+                </span>
+            </div>
         </div>
 
         <div class="sticker-container">
@@ -67,8 +80,12 @@
         </div>
 
         <div class="nutrition-container">
-            <img src="../images/nutrition-facts-label.png" alt="étiquette crédits">
+            <img src="../images/nutrition-facts-label.jpg" alt="étiquette crédits">
         </div>
+    </div>
+
+    <div class="grass-border">
+        <img src="../images/grass-border.png" alt="Border d'herbe" />
     </div>
 </body>
 </html>
