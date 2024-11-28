@@ -333,6 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let code = dataProduction.find(d => d.country === country).code;
         if(code == null) {
             console.error('No code found for the country : ', country);
+            d3.select("#graph1").html(`No code found for the country ${country}`);
             return;
         }
 
@@ -363,8 +364,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? meatPrices.filter(type => meat.some(m => type.toLowerCase().includes(m.toLowerCase())))
                     : meatPrices;
 
-                console.log("Selected Meats:", selectedMeats);
-
                 // Aggregate data by year and calculate totals
                 const dataByYear = d3.groups(data, d => d.year).map(([year, entries]) => {
                     const totalValue = selectedMeats.reduce((sum, type) => {
@@ -385,13 +384,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (!dataByYear || dataByYear.length === 0) {
                     console.log("No data computed for the selected mode.");
+                    d3.select("#chart1").html("No data computed for the selected mode.")
                     data = [];
                     return;
                 }
 
-                console.log("Computed Data:", dataByYear);
-
-                // Assign the processed data to `data`
                 data = dataByYear;
             }
         }
