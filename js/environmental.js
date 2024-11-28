@@ -64,6 +64,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return dataProduction.find(d => d.country === countryName).code;
     }
     function codeToCountryMapping(code) {
+        if (dataProduction.find(d => d.code === code) == undefined) {
+            return null;
+        }
         return dataProduction.find(d => d.code === code).country;
     }
 
@@ -905,25 +908,21 @@ document.addEventListener("DOMContentLoaded", () => {
             let total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
             let total_consumption = total_average-total_production;
             data = dataConsumption;
-            const dataPop = dataPopulation;
             // Get the consumption data for the selected year
-            data = data.filter(d => d.year == year && d.measure == "KG_CAP");
-            console.log("data", data);
+            data = data.filter(d => d.year == year && d.measure == "THND_TONNE");
             const dataPerCountry = d3.groups(data, d => d.location).map(([location, entries]) => {
                 if (filters["meat"].length > 0) {
                     entries = entries.filter(d => filters["meat"].includes(d.type_meat));
                 }
                 const total = d3.sum(entries, d => d.value);
-                const population = dataPop.find(d => d.code == location);
-                if (!population) {
+                const country = codeToCountryMapping(location);
+
+                if (!country) {
                     return;
                 }
-                // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
-                const popYear = Math.floor(year / 10) * 10;
-                const pop = population[`population_${popYear}`];
                 return {
-                    country: codeToCountryMapping(location),
-                    value: total*pop/1000*total_consumption
+                    country: country,
+                    value: total*total_consumption
                 };
             }
             );
@@ -931,7 +930,6 @@ document.addEventListener("DOMContentLoaded", () => {
             dataPerCountry.sort((a, b) => b.value - a.value);
             //On vire les undefined
             ;const dataPerCountryFiltered = dataPerCountry.filter(d => d !== undefined);
-            console.log("dataPerCountry", dataPerCountryFiltered);
 
             const selectedCountries = filters["country"] || [];
             const selectedData = dataPerCountryFiltered.filter(d => selectedCountries.includes(d.country));
