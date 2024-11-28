@@ -1,15 +1,12 @@
 import {initListenersFilters, initFilters} from './filters.js';
-import {isRegionOrGlobal, getLastCountryAdded} from './utils.js';
+import {isRegionOrGlobal, getLastCountryAdded, getSelectedMeat} from './utils.js';
 
 const COLOR_PRODUCTION = "#e7a30c",
-    SELECTED_COLOR_PRODUCTION = "#623e03",
     COLOR_CONSUMPTION = "#ae13bb",
-    SELECTED_COLOR_CONSUMPTION = "#d13ed1",
-    COLOR_PRICE = "#45b707",
-    SELECTED_COLOR_PRICE = "#6ed93a";
+    COLOR_PRICE = "#45b707";
 
 document.addEventListener("DOMContentLoaded", () => {
-    let dataConsumption, dataProduction, dataPrice, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION, selectedColor = SELECTED_COLOR_PRODUCTION;
+    let dataConsumption, dataProduction, dataPrice, dataPopulation, geoData, dataFilters = {}, filters = {}, mode = "PRODUCTION", year = 1961, color = COLOR_PRODUCTION;
     // Dimensions des graphique
     const margin = { top: 20, right: 30, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -103,9 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
             const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
             const avgConsumption = consumptionData.length > 0
-                ? d3.sum(consumptionData, dp => dp.value)
+                ? d3.mean(consumptionData, dp => dp.value)
                 : "Donnée indisponible";
-            const finalvalue = overallAverage*avgConsumption*1000
+            const finalvalue = overallAverage*avgConsumption
             return finalvalue ? finalvalue : 0;
         }
         return 0;
@@ -199,9 +196,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
                 const avgConsumption = consumptionData.length > 0
-                    ? d3.sum(consumptionData, dp => dp.value)
+                    ? d3.mean(consumptionData, dp => dp.value)
                     : "Donnée indisponible";
-                const finalvalue = overallAverage*avgConsumption*1000
+                const finalvalue = overallAverage*avgConsumption
                 infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
             }
 
@@ -230,7 +227,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const countryName = countryData.country;
 
         // Vérifie si le pays est déjà dans le filtre
-        console.log(filters["country"]);
         const index = filters["country"].indexOf(countryName);
         if (index > -1) {
             // Supprime le pays si présent
@@ -239,7 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Ajoute le pays si absent
             filters["country"].push(countryName);
         }
-        console.log(filters["country"]);
 
         updateData();
     }
@@ -341,10 +336,26 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // Récupérer la/les viande(s)
+        let meat = getSelectedMeat(filters);
+        if (!meat || meat.length === 0) {
+            // Default to all meat types
+            meat = dataConsumption.map(d => d.type_meat.toLowerCase());
+        }
+
         // Gestion du mode
-        let data = mode === "CONSUMPTION"
-            ? dataConsumption.filter(c => c.location === code && c.measure === "THND_TONNE")
-            : dataProduction.filter(d => d.country === country);
+        let data;
+        if (mode === "PRODUCTION") {
+            // Production doesn't depend on meat type
+            data = dataProduction.filter(d => d.country === country);
+        } else if (mode === "CONSUMPTION") {
+            // Filter consumption data for the selected meats
+            data = dataConsumption.filter(d => 
+                d.location === code && 
+                d.measure === "THND_TONNE" && 
+                (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))
+            );
+        }
 
         if (!data || data.length === 0) {
             console.log('No data available for the selected country and mode');
@@ -461,25 +472,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function chartPie() {
+        // Récupérer la/les viande(s)
+        const meat = getSelectedMeat(filters) || [];
+
         // Gestion du dataset selon le mode
         const dataForYear = mode === "PRODUCTION"
             ? dataProduction.filter(d => d.year === year && d.code !== "0" && !isRegionOrGlobal(d.country))
-            : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"));
+            : filterRealCountries(dataProduction.filter(d => d.code !== "0" && !isRegionOrGlobal(d.country)), 
+                                    dataConsumption.filter(d => d.year === year && d.measure === "THND_TONNE"
+                                        && (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))));
     
         if (!dataForYear || dataForYear.length === 0) {
             console.error("No data available for the selected mode and year.");
             d3.select("#pieChart").html("No data available for the selected mode and year");
             return;
         }
+
+        // Mapping code, name
+        const codeToCountryName = new Map(dataProduction.map(d => [d.code, d.country]));
     
         // Aggrégation par pays
-        const aggregatedData = d3.groups(dataForYear, d => d.country || d.location)
-            .map(([country, entries]) => ({
-                country,
+        const aggregatedData = d3.groups(dataForYear, d => mode === "PRODUCTION" ? d.country : d.location)
+            .map(([key, entries]) => ({
+                country: codeToCountryName.get(key) || key,
                 value: d3.sum(entries, d => d.value)
             }))
             .filter(d => d.value > 0)
             .sort((a, b) => b.value - a.value);
+
     
         // TOP 10 (9 pays, 1 Other -cumul des autres pays-)
         const topCountries = aggregatedData.slice(0, 9);
@@ -599,347 +619,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .style("font-size", "12px")
             .text(d => `${d.country}`);
     }    
-
-    function chartHistogram() {
-        const data = getHistogramData();
-        console.log(data);
-        const dataPerYear = data.dataPerYear;
-        const selectedCountries = data.selectedCountries;
-        const isInRange = data.isInRange;
-        const mode = data.mode;
-
-        // If the year is out of range, display a message
-        if (!isInRange) {
-            d3.select("#legend").html("No data available for the selected year");
-            return;
-        } else {
-            d3.select("#legend").html("");
-        }
-        
-        
-        // Get dimensions from the DOM
-        const graphDiv = document.getElementById('legend');
-        const margin = { top: 40, right: 30, bottom: 10, left: 100 };
-        const width = graphDiv.clientWidth - margin.left - margin.right;
-        const height = graphDiv.clientHeight - margin.top - margin.bottom;
-
-        // Remove legend children
-        d3.select("#legend").selectAll("*").remove();
     
-        const svg = d3.select("#legend")
-            .append("svg")
-            .attr("width", graphDiv.clientWidth+margin.left+margin.right)
-            .attr("height", graphDiv.clientHeight)
-            .append("g")
-            .attr("transform", `translate(${margin.left}, ${margin.top})`);
-    
-        const x = d3.scaleLinear()
-            .domain([0, d3.max(dataPerYear, d => d.value)])
-            .range([0, width]);
-    
-        const y = d3.scaleBand()
-            .domain(dataPerYear.map(d => d.country))
-            .range([0, height])
-            .padding(0.1);
-        
-        // Titre
-        const title = mode === "PRODUCTION" ? "Ranking of meat production by country (" + year + ")" : mode === "CONSUMPTION" ? "Ranking of meat consumption by country (" + year + ")" : "Price ranking by type of meat (" + year + ")";
-
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", -10)
-            .attr("text-anchor", "middle")
-            .style("font-size", "16px")
-            .style("font-weight", "bold")
-            .text(title);
-    
-        // Axes
-        // svg.append("g")
-        //     .attr("class", "axis axis--x")
-        //     .attr("transform", `translate(0,${height})`)
-        //     .call(d3.axisBottom(x).ticks(5));
-    
-        svg.append("g")
-            .attr("class", "axis axis--y")
-            .call(d3.axisLeft(y).tickSize(0))
-            .select(".domain").remove();
-    
-        // Tooltip
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
-            .style("opacity", 0)
-            .style("position", "absolute")
-            .style("background", "white")
-            .style("border", "1px solid #ccc")
-            .style("padding", "5px");
-    
-
-        // Define the drop shadow filter
-        const defs = svg.append("defs");
-        const filter = defs.append("filter")
-            .attr("id", "drop-shadow")
-            .attr("height", "130%");
-        
-        filter.append("feGaussianBlur")
-            .attr("in", "SourceAlpha")
-            .attr("stdDeviation", 1)
-            .attr("result", "blur");
-        
-        filter.append("feOffset")
-            .attr("in", "blur")
-            .attr("dx", 0.5)
-            .attr("dy", 0.5)
-            .attr("result", "offsetBlur");
-        
-        const feMerge = filter.append("feMerge");
-        feMerge.append("feMergeNode")
-            .attr("in", "offsetBlur");
-        feMerge.append("feMergeNode")
-            .attr("in", "SourceGraphic");
-
-        // Barres
-        svg.selectAll(".bar")
-        .data(dataPerYear)
-        .enter().append("rect")
-        .attr("class", "bar")
-        .attr("y", d => y(d.country))
-        .attr("height", y.bandwidth())
-        .attr("x", 0)
-        .attr("width", d => x(d.value))
-        .attr("rx", 5) // Set the x-axis radius for rounded corners
-        .attr("ry", 5) // Set the y-axis radius for rounded corners
-        .style("filter", "url(#drop-shadow)") // Apply the drop shadow filter
-        .style("fill", d => selectedCountries.includes(d.country) ? selectedColor : color) // Couleur selon sélection
-        .on("mouseover", function(event, d) {
-            tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-            // créer une variable temporaire pour changer value en un chiffre lisible
-            let value = d.value;
-            if (value > 1000000) {
-                value = (value / 1000000).toFixed(2) + "M";
-            } else if (value > 1000) {
-                value = (value / 1000).toFixed(2) + "K";
-            }
-            tooltip.html(`${value} tonnes`)
-                .style("left", (event.pageX + 5) + "px")
-                .style("top", (event.pageY - 28) + "px")
-                .style("border", "1px solid " + color)
-                .style("border-radius", "5px")
-                .style("box-shadow", "0 4px 8px rgba(0, 0, 0, 0.3)");
-        })
-        .on("mouseout", function() {
-            tooltip.transition()
-                .duration(500)
-                .style("opacity", 0);
-        });
-        
-        // Ajouter les valeurs dans les barres
-        svg.selectAll(".label")
-            .data(dataPerYear)
-            .enter().append("text")
-            .attr("class", "label")
-            .attr("y", d => y(d.country) + y.bandwidth() / 2 + 7) // Positionner verticalement au centre de la barre
-            .attr("x", d => {
-                const value = parseFloat(d.value);
-                return x(value) - 10 > 65 ? x(value) - 10 : x(value) + 5; // Vérifier si le label a assez de place
-            })
-            .attr("text-anchor", d => {
-                const value = parseFloat(d.value);
-                return x(value) - 10 > 65 ? "end" : "start"; // Ancrer le texte à la fin ou au début
-            })
-            .text(d => {
-                const value = parseFloat(d.value);
-                if (mode === "PRICE") {
-                    //truncate the value to 2 decimal places and add €/kg
-                    return value.toFixed(2) + " €/kg";
-                } else {
-                    return value > 1000000 ? (value / 1000000).toFixed(2) + "M" : (value / 1000).toFixed(2) + "K";
-                }
-            })
-            .style("fill", d => {
-                const value = parseFloat(d.value);
-                return x(value) - 10 > 65 ? "white" : "black"; // Changer la couleur du texte
-            })
-            .style("font-size", "20px");
-    }
-
-    function getHistogramData() {
-        let data;
-        if (mode == "PRODUCTION") {
-            data = dataProduction;
-
-            const filteredData = data.filter(d => d.year == year && d.code !== "0" && d.code !== "OWID_WRL");
-    
-            // Inclure les pays sélectionnés dans filters[country]
-            const selectedCountries = filters["country"] || [];
-            const selectedData = filteredData.filter(d => selectedCountries.includes(d.country));
-            const topSelectedData = selectedData.sort((a, b) => b.value - a.value).slice(0, 7);
-
-            if (selectedData.length >= 7) {
-                return {
-                    dataPerYear: topSelectedData,
-                    selectedCountries: selectedCountries,
-                    isInRange: true,
-                    mode: "PRODUCTION"
-                };
-            }
-        
-
-            // Trier par valeur pour obtenir les 7 plus grandes valeurs
-            const topData = filteredData
-                .filter(d => !selectedCountries.includes(d.country)) // Exclure les pays déjà sélectionnés
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 7 - selectedData.length); // Récupérer le reste des meilleurs pays
-        
-            // Combiner les pays sélectionnés et les meilleurs pays
-            const dataPerYear = topSelectedData.concat(topData).sort((a, b) => b.value - a.value);
-
-            //return dataPerYear and selectedCountries in an object
-            const dataPerYearObj = {
-                dataPerYear: dataPerYear,
-                selectedCountries: selectedCountries,
-                isInRange: true,
-                mode: "PRODUCTION"
-            }
-            console.log(dataPerYear);
-            return dataPerYearObj;
-        } else if (mode == "PRICE") {
-            if (year < 1990 || year > 2020) {
-                return {
-                    dataPerYear: [],
-                    selectedCountries: [],
-                    isInRange: false,
-                    mode: "PRICE"
-                };
-            }
-            data = dataPrice;
-            const dataPerYear = data.reduce((acc, d) => {
-                let year = d.month.split('-')[1];
-                let real_year = parseInt(year) > 25 ? "19" + year : "20" + year;
-                if (!acc[real_year]) {
-                    acc[real_year] = {
-                        year: real_year,
-                        beef_price: 0,
-                        chicken_price: 0,
-                        lamb_price: 0,
-                        pork_price: 0,
-                        salmon_price: 0
-                    };
-                }
-                acc[real_year].beef_price += d.beef_price;
-                acc[real_year].chicken_price += d.chicken_price;
-                acc[real_year].lamb_price += d.lamb_price;
-                acc[real_year].pork_price += d.pork_price;
-                acc[real_year].salmon_price += d.salmon_price;
-                // When we reach the end of the array, we divide by 12
-                if (d == data[data.length - 1]) {
-                    Object.keys(acc).forEach(key => {
-                        acc[key].beef_price /= 12;
-                        acc[key].chicken_price /= 12;
-                        acc[key].lamb_price /= 12;
-                        acc[key].pork_price /= 12;
-                        acc[key].salmon_price /= 12;
-                    });
-                }
-                return acc;
-            }, {});
-            // transformer dataPerYear en array avec comme clé l'année, dans chaque élément on retrouvera les autres clés avec comme valeur le nom, le prix et la couleur
-            const dataPerYearArray = Object.keys(dataPerYear).map(year => {
-                return {
-                    year: year,
-                    beef_price: {
-                        country: "Beef",
-                        value: dataPerYear[year].beef_price
-                    },
-                    chicken_price: {
-                        country: "Chicken",
-                        value: dataPerYear[year].chicken_price
-                    },
-                    lamb_price: {
-                        country: "Lamb",
-                        value: dataPerYear[year].lamb_price
-                    },
-                    pork_price: {
-                        country: "Pork",
-                        value: dataPerYear[year].pork_price
-                    },
-                    salmon_price: {
-                        country: "Salmon",
-                        value: dataPerYear[year].salmon_price
-                    }
-                };
-            });
-            // On cherche l'année égale à year
-            const selectedYear = dataPerYearArray.find(d => d.year == year);
-            // On supprime l'année
-            delete selectedYear.year
-            // On trie les données par prix
-            const sortedData = Object.values(selectedYear).filter(d => d.name != "year" && d.value > 0).sort((a, b) => b.value - a.value);
-            // On retourne les données triées
-            console.log(sortedData);
-            //On supprime les données qui ont un prix à 0 ou NaN
-            return {
-                dataPerYear: sortedData,
-                selectedCountries: [],
-                isInRange: true,
-                mode: "PRICE"
-            };
-        } else {
-            if (year < 1990) {
-                return {
-                    dataPerYear: [],
-                    selectedCountries: [],
-                    isInRange: false,
-                    mode: "CONSUMPTION"
-                };
-            }
-            data = dataConsumption;
-            const dataPop = dataPopulation;
-            console.log(dataPop);
-            console.log(data);
-            // Filtre les données pour l'année sélectionnée
-            const filteredData = data.filter(d => d.year == year && d.measure === "KG_CAP");
-            // On regroupe les données par pays en ayant la somme des valeurs et en gardant pour chaque valeur la clé et la valeur
-            const dataPerYear = d3.groups(filteredData, d => d.location).map(([location, entries]) => {
-                // get the population for the country
-                const population = dataPop.find(d => d.code == location);
-                console.log(population);
-                if (!population) {
-                    return;
-                }
-                // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
-                const popYear = Math.floor(year / 10) * 10;
-                console.log(popYear);
-                const pop = population[`population_${popYear}`];
-                console.log(pop);
-                return {
-                    country: location,
-                    value: d3.sum(entries, d => d.value*pop/1000), // On multiplie par la population pour avoir la consommation totale
-                    values: entries.map(d => {
-                        return {
-                            key: d.type_meat,
-                            value: d.value*pop/1000
-                        };
-                    })
-                };
-            });
-            console.log(dataPerYear);
-            // On trie les données par valeur et on garde les 7 premières valeurs
-            const topData = dataPerYear.filter(d => d).sort((a, b) => b.value - a.value).slice(0, 7);
-            // On retourne les données triées
-            return {
-                dataPerYear: topData,
-                selectedCountries: [],
-                isInRange: true,
-                mode: "CONSUMPTION"
-            };
-        }
-    }
-    
-    function filterRealCountries(consumptionData, productionData) {
+    function filterRealCountries(productionData, consumptionData) {
         // Vrais pays dans production data
-        const validCountryCodes = new Set(productionData.map(d => d.code));
+        const validCountryCodes = new Set(productionData.map(d => d.code)); // line 606
     
         // Separate invalid codes
         const invalidCodes = new Set();
@@ -966,23 +649,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // Gère les données et la couleur en fonction du mode
         if (mode == "PRODUCTION") {
             color = COLOR_PRODUCTION;
-            selectedColor = SELECTED_COLOR_PRODUCTION;
         } else if (mode == "PRICE") {
             color = COLOR_PRICE;
-            selectedColor = SELECTED_COLOR_PRICE;
         } else {
             color = COLOR_CONSUMPTION;
-            selectedColor = SELECTED_COLOR_CONSUMPTION;
         }
-
-        document.documentElement.style.setProperty('--bar-color', color);
-        document.documentElement.style.setProperty('--bar-hover-color', color);
 
         // Mets à jour tous les graphiques
         chartMap();
         chart1();
         chartPie();
-        chartHistogram();
         // TODO other charts
     }
 
