@@ -78,42 +78,63 @@ document.addEventListener("DOMContentLoaded", () => {
     */
 
     function getProduction(d){
-        const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+        const productionData = dataProduction.find(dp => dp.code === d.id &&  dp.year == (d.year ? d.year : year));
         return productionData ? productionData.value : 0;
     }
 
     function getConsumption(d){
-        const selectedMeats = filters["meat"] || [];
+        const selectedMeats = getSelectedMeat(filters) || [];
         let consumptionData = dataConsumption.filter(dp => 
             dp.location === d.id && 
-            dp.year == year && 
+            dp.year == (d.year ? d.year : year) && 
             dp.measure === "THND_TONNE" &&
-            selectedMeats.includes(dp.type_meat)
+            (selectedMeats.length === 0 || selectedMeats.includes(dp.type_meat))
         );
 
-        if (selectedMeats.length === 0) {
-            consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-        }
-
-        return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : 0;
+        return consumptionData.length > 0 ? (d3.sum(consumptionData, dp => dp.value) * 1000) : 0;
     }
 
     function getPrices(d){
-        const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
-        const averages = {};
-        ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
-            const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
-            const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
-            averages[type] = typeAverage;
-        });
+        // Get selected meats, default all
+        const meat = getSelectedMeat(filters) || [];
 
-        const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
-        const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-        const avgConsumption = consumptionData.length > 0
-            ? d3.mean(consumptionData, dp => dp.value)
-            : "Donnée indisponible";
-        const finalvalue = overallAverage*avgConsumption
-        return finalvalue ? finalvalue : 0;
+        // Filter price data for the selected year
+        const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(d.year ? d.year : year).slice(-2));
+
+        // Selected meat types or default to all meats
+        const meatPrices = ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'];
+        const selectedMeatsPrices = meat && meat.length > 0
+            ? meatPrices.filter(type => meat.some(m => type.toLowerCase().includes(m.toLowerCase())))
+            : meatPrices;
+
+        // Compute the sum of (consumption of meat * price of meat) for the selected country and year
+        const totalValue = selectedMeatsPrices.reduce((sum, type) => {
+            // Get all prices for the specific meat type
+            const prices = filteredData.map(dp => dp[type]).filter(price => price != null);
+
+            // Calculate the total price (sum all months of a year)
+            const totalPrice = prices.length > 0 ? d3.sum(prices) : 0;
+
+            // Data filtering
+            const consumptionData = dataConsumption.filter(dp =>
+                dp.location === d.id &&
+                dp.year == (d.year ? d.year : year) &&
+                dp.measure === "THND_TONNE" &&
+                dp.type_meat.toLowerCase().includes(type.split('_')[0]) // Match meat type
+            );
+
+            console.log("consumptionData", consumptionData);
+
+            // Calculate total consumption for the meat type
+            const totalConsumption = consumptionData.length > 0
+                ? d3.sum(consumptionData, dp => dp.value)
+                : 0;
+
+            // Add (consumption * price) for this meat type
+            return sum + (totalConsumption * 1000000 * totalPrice);
+        }, 0);
+
+        return totalValue ? totalValue : 0;
     }
 
     function valueAccessor(d) {
@@ -326,77 +347,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }    
     
     function chart1() {
-        // Récupérer le pays sélectionné 
+        // Récupérer le pays sélectionné
         const country = getLastCountryAdded(filters);
-        if(country == null) {
+        if (country == null) {
             d3.select("#graph1").html("Select a country");
             return;
         }
+    
         // Code du pays
-        let code = dataProduction.find(d => d.country === country).code;
-        if(code == null) {
-            console.error('No code found for the country : ', country);
+        let code = dataProduction.find(d => d.country === country)?.code;
+        if (code == null) {
+            console.error('No code found for the country:', country);
             d3.select("#graph1").html(`No code found for the country ${country}`);
             return;
         }
 
-        // Récupérer la/les viande(s)
-        let meat = getSelectedMeat(filters);
-        if (!meat || meat.length === 0) {
-            // Default to all meat types
-            meat = dataConsumption.map(d => d.type_meat.toLowerCase());
-        }
+         // Range
+        const years = d3.range(1961, 2024); 
+    
+        // Calcul
+        let data = years.map(year => {
+            const d = { id: code, year }; 
+            console.log("d", d);
+            console.log("valueAccessor(d) : ", valueAccessor(d));
+            return { year, value: valueAccessor(d) }; 
+        });
 
-        // Gestion du mode
-        let data;
-        if (mode === "PRODUCTION") {
-            // Production doesn't depend on meat type
-            data = dataProduction.filter(d => d.country === country);
-        } else if (mode === "CONSUMPTION" || mode === "PRICE") {
-            // Filter consumption data for the selected meats
-            data = dataConsumption.filter(d => 
-                d.location === code && 
-                d.measure === "THND_TONNE" && 
-                (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))
-            );
-
-            if(mode === "PRICE") {
-                // Handle meat selection or default to all meats
-                const meatPrices = ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'];
-                const selectedMeats = meat && meat.length > 0
-                    ? meatPrices.filter(type => meat.some(m => type.toLowerCase().includes(m.toLowerCase())))
-                    : meatPrices;
-
-                // Aggregate data by year and calculate totals
-                const dataByYear = d3.groups(data, d => d.year).map(([year, entries]) => {
-                    const totalValue = selectedMeats.reduce((sum, type) => {
-                        // Get all prices for the meat type
-                        const prices = dataPrice.map(e => e[type]).filter(price => price != null);
-
-                        // Calculate total consumption for the matched meat type
-                        const totalConsumption = entries
-                            .filter(e => e.type_meat.toLowerCase().includes(type.split('_')[0])) // Match meat type
-                            .reduce((sum, e) => sum + e.value, 0);
-
-                        // Multiply total consumption by the sum of prices
-                        const totalPrice = prices.length > 0 ? d3.sum(prices) : 0;
-
-                        return sum + totalConsumption * totalPrice;
-                    }, 0);
-
-                    return { year, value: totalValue};
-                });
-
-                if (!dataByYear || dataByYear.length === 0) {
-                    console.log("No data computed for the selected mode.");
-                    d3.select("#chart1").html("No data computed for the selected mode.")
-                    data = [];
-                    return;
-                }
-
-                data = dataByYear;
-            }
-        }
+        // Filter out years with no data
+        data = data.filter(d => d.value > 0);
 
         if (!data || data.length === 0) {
             console.log('No data available for the selected country and mode');
@@ -404,17 +382,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Aggregate data 
-        const dataGrouped = d3.groups(data, d => d.year).map(([year, entries]) => {
-            return {
-                year: year,
-                value: d3.sum(entries, d => d.value) // même année
-            };
-        });
+        // Sort data by year
+        data.sort((a, b) => a.year - b.year);
 
-        dataGrouped.sort((a, b) => a.year - b.year);
-
-        // Remove 
+        // Remove previous chart
         d3.select("#graph1").selectAll("*").remove();
 
         // Tooltip setup
@@ -447,40 +418,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Axes
         const x = d3.scalePoint()
-            .domain(dataGrouped.map(d => d.year))
+            .domain(data.map(d => d.year))
             .range([0, width]);
 
         const y = d3.scaleLinear()
-            .domain([0, d3.max(dataGrouped, d => d.value)])
+            .domain([0, d3.max(data, d => d.value)])
             .nice()
             .range([height, 0]);
 
-        // Ajout des axes
+        // Add axes
         svg.append("g")
             .attr("transform", `translate(0, ${height})`)
-            .call(d3.axisBottom(x).tickValues(dataGrouped.map((d, i) => (i % 5 === 0 ? d.year : null)).filter(d => d)))
+            .call(d3.axisBottom(x).tickValues(data.map((d, i) => (i % 5 === 0 ? d.year : null)).filter(d => d)))
             .selectAll("text")
             .style("text-anchor", "end");
 
         svg.append("g")
             .call(d3.axisLeft(y).ticks(6).tickFormat(d3.format(".2s")));
 
-        // Create the line generator
+        // Line generator
         const line = d3.line()
             .x(d => x(d.year))
             .y(d => y(d.value));
 
-        // Draw the line
+        // Draw line
         svg.append("path")
-            .datum(dataGrouped)
+            .datum(data)
             .attr("fill", "none")
             .attr("stroke", color)
             .attr("stroke-width", 2)
             .attr("d", line);
 
-        // Add points for each data point
+        // Add data points
         svg.selectAll(".dot")
-            .data(dataGrouped)
+            .data(data)
             .enter()
             .append("circle")
             .attr("cx", d => x(d.year))
@@ -489,7 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("fill", color)
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
-                .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
             })
             .on("mousemove", (event) => {
                 tooltip.style("left", `${event.pageX + 10}px`)
@@ -506,12 +477,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("text-anchor", "middle")
             .style("font-size", "16px")
             .style("font-weight", "bold")
-            .text(`${mode === "PRODUCTION" ? "Production" : "Consumption"} Trends for ${country}`);
+            .text(`${mode === "PRODUCTION" ? "Production" : mode === "CONSUMPTION" ? "Consumption" : "Prices"} Trends for ${country}`);
 
         // Hide tooltip when leaving the container
         container.on("mouseleave", () => tooltip.style("opacity", 0));
     }
-
+    
     function chartPie() {
         // Récupérer la/les viande(s)
         const meat = getSelectedMeat(filters) || [];
@@ -536,14 +507,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const aggregatedData = d3.groups(dataForYear, d => mode === "PRODUCTION" ? d.country : d.location)
             .map(([key, entries]) => ({
                 country: codeToCountryName.get(key) || key,
-                value: d3.sum(entries, d => d.value)
+                value: mode === "PRODUCTION" ? d3.sum(entries, d => d.value) : d3.sum(entries, d => d.value) * 1000
             }))
             .filter(d => d.value > 0)
             .sort((a, b) => b.value - a.value);
-
     
         // TOP 10 (9 pays, 1 Other -cumul des autres pays-)
         const topCountries = aggregatedData.slice(0, 9);
+        console.log("topCountries", topCountries);
         const otherValue = aggregatedData.slice(9).reduce((sum, d) => sum + d.value, 0);
         if (otherValue > 0) {
             topCountries.push({ country: "Other", value: otherValue });

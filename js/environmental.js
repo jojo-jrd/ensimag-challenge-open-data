@@ -76,17 +76,60 @@ document.addEventListener("DOMContentLoaded", () => {
     function getProdutionEmission(d){
         let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
 
-        const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+        const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == (d.year ? d.year : year));
         return productionData? (productionData.value)*total_production : 0;
     }
 
     function getConsumptionEmission(d){
-        let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
-        let total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
-        let total_consumption = total_average-total_production;
-        
-        const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-        return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value)*total_consumption : 0;   
+        // Default averages if no specific meat match is found
+        const total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
+        const total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
+        const default_consumption_emission = total_average - total_production;
+
+        // Retrieve selected meats or default to all meats if none are selected
+        const selectedMeats = getSelectedMeat(filters) || [];
+        const meatTypes = dataEmission.filter(e => selectedMeats.length == 0 || selectedMeats.find(meat => e.product.toLowerCase().includes(meat))).map(e => e.product.toLowerCase());
+
+        console.log("Filters :", {
+            location: d.id,
+            year: d.year || year,
+            measure: "THND_TONNE"
+        });
+
+        // Filter the relevant consumption data for the country and year
+        const consumptionData = dataConsumption.filter(dp =>
+            dp.location === d.id &&
+            dp.year == (d.year ? d.year : year) &&
+            dp.measure === "THND_TONNE" &&
+            meatTypes.find(m => m.includes(dp.type_meat.toLowerCase()))
+        );
+
+        console.log("consumptionData", consumptionData);
+
+        // Compute total emissions based on the meat selection
+        const totalEmissions = meatTypes.reduce((sum, meat) => {
+            // Match the meat type in emissions data
+            const emissionEntry = dataEmission.find(e => meat == e.product.toLowerCase());
+            console.log("meat", meat);
+            if (!emissionEntry) return sum; // Skip if no matching emission entry
+
+            // Match the meat type in consumption data
+            const meatConsumptionEntries = consumptionData.filter(dp =>
+                meat.includes(dp.type_meat.toLowerCase())
+            );
+
+            // Compute the total emissions for this meat type
+            const meatEmissions = meatConsumptionEntries.reduce((subtotal, entry) => {
+                return subtotal + (entry.value * 1000 * (emissionEntry.total_average || default_consumption_emission));
+            }, 0);
+
+            return sum + meatEmissions; // Accumulate emissions for all meat types
+        }, 0);
+
+        // Return the total emissions or 0 if no data is available
+        return totalEmissions > 0 ? totalEmissions : 0;   
+
+        console.log("totalEmissions", totalEmissions);
     }
 
     function valueAccessor(d) {
@@ -280,152 +323,122 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         // Code du pays
         const code = countryData.code;
+
+        // Range
+        const years = d3.range(1961, 2024);
     
-        // Gestion du dataset selon le mode
-        const data = mode === "PRODUCTIONEMISSION"
-            ? dataProduction.filter(d => d.country === countryData.country)
-            : dataConsumption.filter(d => d.location === code);
-    
-        if (!data || data.length === 0) {
+         // Compute data using valueAccessor for each year
+        let data = years.map(year => {
+            const d = { id: code, year };
+            return { year, value: valueAccessor(d) };
+        });    
+
+        // Filter out years with no data
+        data = data.filter(d => d.value > 0);
+
+        if (data.length === 0) {
             console.log("No data available for the selected country and mode");
             d3.select("#graph1").html("No data available for the selected country and mode");
             return;
         }
 
-        console.log("data", data);
-    
-        // Aggregate emissions
-        const aggregatedData = data.map(d => {
-            const year = d.year;
+        // Sort data by year
+        data.sort((a, b) => a.year - b.year);
 
-            const baseEmission = mode === "PRODUCTIONEMISSION"
-                ? dataEmission.reduce((sum, e) => sum + (e.total_average * d.value || 0), 0) 
-                : dataEmission.reduce((sum, e) => {
-                    if (meat.some(m => e.product.toLowerCase().includes(m.toLowerCase()))) {
-                        const matchingMeat = dataConsumption.find
-                                                (c => c.location === d.location && c.year === year &&
-                                                    e.product.toLowerCase().includes(c.type_meat.toLowerCase())
-                        );
-                        return sum + (matchingMeat ? e.total_average * matchingMeat.value * 1000 : 0);
-                    }
-                    return sum;
-                }, 0);
-
-            return { year, value: baseEmission };
-        });
-        aggregatedData.sort((a, b) => a.year - b.year);
-    
-        if (aggregatedData.length === 0) {
-            console.error("No aggregated data available for the chart.");
-            return;
-        }
-
-        console.log("aggregatedData", aggregatedData);
-    
-        // Remove
+        // Remove previous chart
         d3.select("#graph1").selectAll("*").remove();
-        d3.select("#graph1").html("");
 
-        // Dimensions
+        // Set up the chart dimensions
         const container = d3.select("#graph1");
+        container.html("");
         const containerNode = container.node();
-        if (!containerNode) {
-            console.error("Container with id 'graph1' not found in the DOM.");
-            return;
-        }
         const { width: containerWidth, height: containerHeight } = containerNode.getBoundingClientRect();
-        const margin = { top: 40, right: 15, bottom: 70, left: 85 };
+
+        const margin = { top: 50, right: 20, bottom: 70, left: 80 };
         const width = containerWidth - margin.left - margin.right;
         const height = containerHeight - margin.top - margin.bottom;
 
-        if (width <= 0 || height <= 0) {
-            console.error("Invalid container dimensions for the chart.");
-            return;
-        }
-    
-        // SVG container
-        const svg = d3.select("#graph1")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
+        const svg = container.append("svg")
+            .attr("width", containerWidth)
+            .attr("height", containerHeight)
             .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-        // Tooltip container
-        const tooltip = d3.select("#graph1")
-        .append("div")
-        .style("position", "absolute")
-        .style("background", "white")
-        .style("border", "1px solid #ccc")
-        .style("border-radius", "5px")
-        .style("padding", "8px")
-        .style("pointer-events", "none")
-        .style("opacity", 0)
-        .style("font-size", "12px");
-    
-        // Axes
+        // Create or select the tooltip (ensure it exists only once)
+        let tooltip = d3.select(".tooltip");
+        if (tooltip.empty()) {
+            tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("position", "absolute")
+                .style("background", "white")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "5px")
+                .style("padding", "8px")
+                .style("pointer-events", "none")
+                .style("opacity", 0); // Start hidden
+        }
+
+        // Axes scales
         const x = d3.scalePoint()
-            .domain(aggregatedData.map(d => d.year))
+            .domain(data.map(d => d.year))
             .range([0, width]);
-    
+
         const y = d3.scaleLinear()
-            .domain([0, d3.max(aggregatedData, d => d.value)])
-            .nice()
+            .domain([0, d3.max(data, d => d.value)]).nice()
             .range([height, 0]);
-    
-        // Ajout des axes
-        // Tous les 5 ans   
+
+        // Add X and Y axes
         svg.append("g")
-        .attr("transform", `translate(0, ${height})`)
-        .call(
-            d3.axisBottom(x)
-                .tickFormat((d, i) => (i % 5 === 0 ? d : "")) // 5 ans
-        );
-    
-        svg.append("g").call(d3.axisLeft(y));
-    
-        // Line
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x).tickValues(data.map((d, i) => (i % 5 === 0 ? d.year : null)).filter(d => d)))
+            .selectAll("text")
+            .style("text-anchor", "end");
+
+        svg.append("g")
+            .call(d3.axisLeft(y).ticks(6).tickFormat(d3.format(".2s")));
+
+        // Line generator
         const line = d3.line()
             .x(d => x(d.year))
             .y(d => y(d.value));
-    
-        // Draw 
+
+        // Draw the line
         svg.append("path")
-            .datum(aggregatedData)
+            .datum(data)
             .attr("fill", "none")
-            .attr("stroke", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION)
+            .attr("stroke", color)
             .attr("stroke-width", 2)
             .attr("d", line);
-    
-        // Points
+
+        // Add data points
         svg.selectAll(".dot")
-        .data(aggregatedData)
-        .enter()
-        .append("circle")
-        .attr("cx", d => x(d.year))
-        .attr("cy", d => y(d.value))
-        .attr("r", 4)
-        .attr("fill", mode === "PRODUCTIONEMISSION" ? COLOR_PRODUCTION_EMISSION : COLOR_CONSUMPTION_EMISSION)
-        .on("mouseover", (event, d) => {
-            tooltip.style("opacity", 1)
-                .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
-        })
-        .on("mousemove", (event) => {
-            tooltip.style("left", `${event.pageX + 10}px`)
-                .style("top", `${event.pageY - 20}px`);
-        })
-        .on("mouseout", () => {
-            tooltip.style("opacity", 0);
-        });    
-        
-        // Titre
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("cx", d => x(d.year))
+            .attr("cy", d => y(d.value))
+            .attr("r", 4)
+            .attr("fill", color)
+            .on("mouseover", (event, d) => {
+                tooltip.style("opacity", 1)
+                    .html(`<strong>Year:</strong> ${d.year}<br><strong>Value:</strong> ${d.value.toLocaleString()}`);
+            })
+            .on("mousemove", (event) => {
+                tooltip.style("left", `${event.pageX + 10}px`)
+                    .style("top", `${event.pageY - 20}px`);
+            })
+            .on("mouseout", () => {
+                tooltip.style("opacity", 0);
+            });
+
+        // Add chart title
         svg.append("text")
             .attr("x", width / 2)
             .attr("y", -10)
             .attr("text-anchor", "middle")
             .style("font-size", "16px")
             .style("font-weight", "bold")
-            .text(`${mode === "PRODUCTIONEMISSION" ? "Production Emissions" : "Consumption Emissions"} Trends for ${country}`);
+            .text(`${mode === "PRODUCTION" ? "Production" : "Consumption"} Emissions Trends for ${country}`);
     }    
 
     function chartPie() {
@@ -613,15 +626,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
         // Tooltip setup
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
-            .style("position", "absolute")
-            .style("background-color", "white")
-            .style("padding", "5px 10px")
-            .style("border", "1px solid #ccc")
-            .style("border-radius", "5px")
-            .style("pointer-events", "none")
-            .style("opacity", 0);
+        let tooltip = d3.select(".tooltip");
+        if (tooltip.empty()) {
+            tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("position", "absolute")
+                .style("background", "white")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "5px")
+                .style("padding", "8px")
+                .style("pointer-events", "none")
+                .style("opacity", 0); // Start hidden
+        }
 
         // Dessin des arc
         const arcs = chartGroup
@@ -643,7 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .style("top", (event.pageY - 20) + "px");
         })
         .on("mouseout", function () {
-            tooltip.style("opacity", 0); // hide the tooltip
+            tooltip.style("opacity", 0);
         });
 
         arcs.append("path")
@@ -675,10 +691,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .style("font-family", "Arial, sans-serif")
         .style("text-anchor", "start")
         .text(d => `${d.type}`);
-
-
-        // Hide tooltip when leaving the container
-        container.on("mouseleave", () => tooltip.style("opacity", 0));
     }
 
     function chartHistogram() {
