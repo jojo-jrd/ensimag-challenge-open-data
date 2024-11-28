@@ -68,6 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function codeToCountryMapping(code) {
+        if (dataProduction.find(d => d.code === code) == undefined) {
+            return null;
+        }
         return dataProduction.find(d => d.code === code).country;
     }
 
@@ -928,28 +931,27 @@ document.addEventListener("DOMContentLoaded", () => {
             data = dataConsumption;
             const dataPop = dataPopulation;
             // Filtre les données pour l'année sélectionnée
-            const filteredData = data.filter(d => d.year == year && d.measure === "KG_CAP");
+            const filteredData = data.filter(d => d.year == year && d.measure === "THND_TONNE" && d.location !== "OWID_WRL");
             // On regroupe les données par pays en ayant la somme des valeurs et en gardant pour chaque valeur la clé et la valeur
             const dataPerYear = d3.groups(filteredData, d => d.location).map(([location, entries]) => {
-                // get the population for the country
-                const population = dataPop.find(d => d.code == location);
-                if (!population) {
-                    return;
-                }
-                // The population are regrouped every 10 years, we need to find the closest year, if the last number is 5 or more we take the next 10 year, else we take the previous 10 year
-                const popYear = Math.floor(year / 10) * 10;
-                const pop = population[`population_${popYear}`];
-                // Si length de filters["meat"] est supérieur à 0, on filtre les données
                 if (filters["meat"].length > 0) {
                     entries = entries.filter(d => filters["meat"].includes(d.type_meat));
                 }
+                console.log(location);
+
+                const country = codeToCountryMapping(location);
+
+                if (!country) {
+                    return null;
+                }
+
                 return {
-                    country: codeToCountryMapping(location),
-                    value: d3.sum(entries, d => d.value*pop/1000), // On multiplie par la population pour avoir la consommation totale
+                    country: country,
+                    value: d3.sum(entries, d => d.value), // On multiplie par la population pour avoir la consommation totale
                     values: entries.map(d => {
                         return {
                             key: d.type_meat,
-                            value: d.value*pop/1000
+                            value: d.value
                         };
                     })
                 };

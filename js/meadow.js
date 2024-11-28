@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .range([0, width]);
 
             const yLeft = d3.scaleLinear()
-                .domain([90, 120]) // Échelle pour les salaires
+                .domain([300, 380]) // Échelle pour les salaires
                 .range([height, 0]);
 
             const yRight = d3.scaleLinear()
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
 
                     tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html(`Consommation: ${d.conso_poisson} kg/hab<br/>Année: ${d.année}`)
+                    tooltip.html(`Indice Prix: ${d.prix_moy} <br/>Année: ${d.année}`)
                         .style("left", (event.pageX - 550) + "px")
                         .style("top", (event.pageY - 200) + "px");
                     
@@ -243,17 +243,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 .x(d => x(d.année))
                 .y(d => yLeft(d.ensemble));
 
-            svg.append("path")
+                svg.append("path")
                 .datum(mergedData)
                 .attr("fill", "none")
                 .attr("stroke", animalColors[animal][0])
                 .attr("stroke-width", 4)
                 .attr("d", line)
                 .on("mouseover", function(event) {
+                    const lastData = mergedData[mergedData.length - 1]; // Dernière donnée
                     tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html("Salaires<br/>Année: " + mergedData[mergedData.length - 1].année) // Afficher l'année de la dernière donnée
-                        .style("left", (event.pageX - 550) + "px")
-                        .style("top", (event.pageY - 200) + "px");
+                    tooltip.html(
+                        `<strong>Salaire moyen</strong><br/>` // Remplacez 'valeur' par le nom de votre champ
+                    )
+                    .style("left", (event.pageX - 550) + "px")
+                    .style("top", (event.pageY - 200) + "px");
             
                     // Ajouter un contour blanc lors du survol
                     d3.select(this)
