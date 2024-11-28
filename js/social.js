@@ -348,13 +348,52 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mode === "PRODUCTION") {
             // Production doesn't depend on meat type
             data = dataProduction.filter(d => d.country === country);
-        } else if (mode === "CONSUMPTION") {
+        } else if (mode === "CONSUMPTION" || mode === "PRICE") {
             // Filter consumption data for the selected meats
             data = dataConsumption.filter(d => 
                 d.location === code && 
                 d.measure === "THND_TONNE" && 
                 (meat.length === 0 || meat.some(m => d.type_meat.toLowerCase().includes(m.toLowerCase())))
             );
+
+            if(mode === "PRICE") {
+                // Handle meat selection or default to all meats
+                const meatPrices = ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'];
+                const selectedMeats = meat && meat.length > 0
+                    ? meatPrices.filter(type => meat.some(m => type.toLowerCase().includes(m.toLowerCase())))
+                    : meatPrices;
+
+                console.log("Selected Meats:", selectedMeats);
+
+                // Aggregate data by year and calculate totals
+                const dataByYear = d3.groups(data, d => d.year).map(([year, entries]) => {
+                    const totalValue = selectedMeats.reduce((sum, type) => {
+                        // Get the average price for the meat type
+                        const prices = dataPrice.map(e => e[type]).filter(price => price != null);
+                        const avgPrice = prices.length > 0 ? d3.mean(prices) : 0;
+
+                        // Calculate total consumption for the matched meat type
+                        const totalConsumption = entries
+                            .filter(e => e.type_meat.toLowerCase().includes(type.split('_')[0])) // Match meat type
+                            .reduce((sum, e) => sum + e.value, 0);
+
+                        return sum + totalConsumption * avgPrice;
+                    }, 0);
+
+                    return { year, value: totalValue};
+                });
+
+                if (!dataByYear || dataByYear.length === 0) {
+                    console.log("No data computed for the selected mode.");
+                    data = [];
+                    return;
+                }
+
+                console.log("Computed Data:", dataByYear);
+
+                // Assign the processed data to `data`
+                data = dataByYear;
+            }
         }
 
         if (!data || data.length === 0) {
