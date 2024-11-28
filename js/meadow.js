@@ -38,10 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function createCombinationChart(animal) {
-        console.log("Création du graphique combiné pour :", animal);
         animal = animal.toLowerCase();
-        console.log(animal)
-        console.log(animalColors[animal])
         // Nettoyer le conteneur avant de créer un nouveau graphique
         d3.select("#chart").selectAll("*").remove();
 
@@ -91,8 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     prix_moy: price ? price.prix_moy : null
                 };
             });
-
-            console.log("Données combinées :", mergedData);
 
             // Échelles
             const x = d3.scaleLinear()
@@ -334,7 +329,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     animals.forEach(animal => {
         animal.addEventListener('click', function (event) {
-            console.log('Animal cliqué : ' + this.getAttribute('alt'));
             updateChartTitle(this.getAttribute('alt'));
             animals.forEach(a => a.classList.remove('active'));
 
