@@ -242,7 +242,7 @@ header {
 }
 
 .sticker-container img {
-    width: 10vw;
+    width: 14vw;
     height: auto;
     transform: rotate(5deg);
 }
@@ -255,7 +255,7 @@ header {
 }
 
 .nutrition-container img {
-    width: 12vw;
+    width: 15vw;
     height: auto;
     transform: rotate(-3deg);
 }
