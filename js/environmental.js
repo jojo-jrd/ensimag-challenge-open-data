@@ -928,13 +928,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 const total = d3.sum(entries, d => d.value);
                 const country = codeToCountryMapping(location);
+                const d = {
+                    id: location,
+                    year: year
+                };
 
                 if (!country) {
                     return;
                 }
                 return {
                     country: country,
-                    value: total*total_consumption
+                    value: getConsumptionEmission(d)
                 };
             }
             );

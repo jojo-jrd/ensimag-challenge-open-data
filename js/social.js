@@ -948,11 +948,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 return {
                     country: country,
-                    value: d3.sum(entries, d => d.value), // On multiplie par la population pour avoir la consommation totale
+                    value: d3.sum(entries, d => d.value*1000), // On multiplie par la population pour avoir la consommation totale
                     values: entries.map(d => {
                         return {
                             key: d.type_meat,
-                            value: d.value
+                            value: d.value*1000
                         };
                     })
                 };
