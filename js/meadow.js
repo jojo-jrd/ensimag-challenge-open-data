@@ -84,20 +84,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
             // Axes
+            // Axe X
             svg.append("g")
                 .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")))
+                .attr("stroke", "#333"); // Couleur de l'axe X
 
+            // Axe Y pour les salaires
             svg.append("g")
-                .call(d3.axisLeft(yLeft));
+                .call(d3.axisLeft(yLeft))
+                .attr("color", "#6fc1d3"); // Couleur de l'axe Y pour les salaires
 
+            // Axe Y pour la consommation de poisson
             svg.append("g")
                 .attr("transform", `translate(${width},0)`)
-                .call(d3.axisRight(yRight));
+                .call(d3.axisRight(yRight))
+                .attr("color", "rgb(0 63 102)"); // Couleur de l'axe Y pour la consommation de poisson
 
+            // Axe Y pour le prix moyen
             svg.append("g")
-                .attr("transform", `translate(${width},0)`)
-                .call(d3.axisRight(yRight2));
+                .attr("transform", `translate(${width + 30},0)`)
+                .call(d3.axisRight(yRight2))
+                .attr("color", "rgb(168 199 250)"); // Couleur de l'axe Y pour le prix moyen
 
             // Barres pour la consommation de poisson
             svg.selectAll(".bar-conso")
@@ -110,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .attr("width", 10) // Largeur des barres
                 .attr("height", d => height - yRight(d.conso_poisson))
                 .attr("fill", "rgb(0 63 102)");
+                
 
             // Barres pour le prix de poisson
             svg.selectAll(".bar-price")
@@ -137,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Légende
             const legend = svg.append("g")
-                .attr("transform", `translate(${width / 3 - 100}, ${height + 20})`); // Positionner la légende au centre en bas du graphique
+                .attr("transform", `translate(${width / 3 - 100}, ${height + 30})`); // Positionner la légende au centre en bas du graphique
 
             // Légende pour l'indice de salaire
             legend.append("rect")
@@ -183,6 +192,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 .text("Prix Moyen (€)")
                 .style("font-size", "12px")
                 .attr("fill", "rgb(168 199 250)");
+
+                const yRightAxis = svg.append("g")
+    .attr("transform", `translate(${width},0)`)
+    .call(d3.axisRight(yRight))  // Axe pour la consommation de poisson
+    .attr("stroke", "rgb(0 63 102)");
+                // Récupérer les ticks de l'axe de la consommation de poisson (yRight)
+const consumptionTicks = yRightAxis.selectAll(".tick");
+
+consumptionTicks.each(function(d) {
+    svg.append("line")
+        .attr("x1", 0)
+        .attr("y1", yRight(d))
+        .attr("x2", width)
+        .attr("y2", yRight(d))
+        .attr("stroke", "#000000")
+        .attr("stroke-dasharray", "5,5")
+        .attr("stroke-width", 0.5);
+});
 
 
 
