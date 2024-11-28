@@ -3,7 +3,7 @@ import csv
 # Lire les données depuis le fichier CSV
 result = {}
 
-with open('prix-poule2.csv', mode='r') as file:
+with open('prix-saumon2.csv', mode='r') as file:
     reader = csv.reader(file, delimiter='\t')
     for row in reader:
         year = row[0]  # Récupérer l'année
