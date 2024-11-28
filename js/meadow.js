@@ -40,25 +40,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function createCombinationChart(animal) {
         console.log("Création du graphique combiné pour :", animal);
         animal = animal.toLowerCase();
-        console.log(animal)
-        console.log(animalColors[animal])
-        // Nettoyer le conteneur avant de créer un nouveau graphique
-        d3.select("#chart").selectAll("*").remove();
-
-        const margin = { top: 50, right: 60, bottom: 50, left: 50 };
-        const width = 700 - margin.left - margin.right;
-        const height = 400 - margin.top - margin.bottom;
-
-        const svg = d3.select("#chart")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
-
+        console.log(animal);
+        console.log(animalColors[animal]);
+    
         // Charger les deux ou trois fichiers CSV en parallèle
-        const fichier_prix = "../csv/prix-"+animal+".csv"
-        const fichier_conso = "../csv/conso-"+animal+".csv"
+        const fichier_prix = `../csv/prix-${animal}.csv`;
+        const fichier_conso = `../csv/conso-${animal}.csv`;
         Promise.all([
             d3.csv("../csv/salaires-fr.csv"),
             d3.csv(fichier_conso),
@@ -69,17 +56,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 d.année = +d.année;
                 d.ensemble = +d.ensemble;
             });
-
+    
             animalData.forEach(d => {
                 d.année = +d.année;
                 d.conso_viande = +d.conso_viande;
             });
-
+    
             priceData.forEach(d => {
                 d.année = +d.année;
                 d.prix_moy = +d.prix_moy;
             });
-
+    
             // Fusionner les trois ensembles de données par année
             const mergedData = salaryData.map(s => {
                 const animal = animalData.find(f => f.année === s.année);
@@ -91,161 +78,126 @@ document.addEventListener('DOMContentLoaded', function () {
                     prix_moy: price ? price.prix_moy : null
                 };
             });
-
+    
             console.log("Données combinées :", mergedData);
-
+    
+            // Dimensions et marges
+            const margin = { top: 50, right: 60, bottom: 50, left: 50 };
+            const width = 700 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+    
+            // Vérifier si le SVG existe déjà
+            let svg = d3.select("#chart").select("svg");
+            if (svg.empty()) {
+                svg = d3.select("#chart")
+                    .append("svg")
+                    .attr("width", 700)
+                    .attr("height", 400)
+                    .append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+            } else {
+                svg = svg.select("g");
+            }
+    
             // Échelles
             const x = d3.scaleLinear()
                 .domain(d3.extent(mergedData, d => d.année))
                 .range([0, width]);
-
+    
             const yLeft = d3.scaleLinear()
                 .domain([300, 380]) // Échelle pour les salaires
                 .range([height, 0]);
-
+    
             const yRight = d3.scaleLinear()
-                .domain([0, d3.max(mergedData, d => d.conso_viande)+d3.max(mergedData, d => d.conso_viande)/2]) // Échelle pour la consommation
+                .domain([0, d3.max(mergedData, d => d.conso_viande) + d3.max(mergedData, d => d.conso_viande) / 2])
                 .range([height, 0]);
-
+    
             const yRight2 = d3.scaleLinear()
-                .domain([0, d3.max(mergedData, d => d.prix_moy)]) // Échelle pour le prix
+                .domain([0, d3.max(mergedData, d => d.prix_moy)])
                 .range([height, 0]);
-
-
-            // Axes
+    
+            // Supprimer les anciens axes avant d'en ajouter de nouveaux
+            svg.selectAll(".axis").remove();
+    
             // Axe X
             svg.append("g")
+                .attr("class", "axis x-axis")
                 .attr("transform", `translate(0,${height})`)
                 .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-                .attr("stroke", "#333"); // Couleur de l'axe X
-
+                .attr("stroke", "#333");
+    
             // Axe Y pour les salaires
             svg.append("g")
+                .attr("class", "axis y-axis-left")
                 .call(d3.axisLeft(yLeft))
-                .attr("color", animalColors[animal][0]) // Couleur de l'axe Y pour les salaires
-
-            // Axe Y pour la consommation de poisson
+                .attr("color", animalColors[animal][0]);
+    
+            // Axe Y pour la consommation
             svg.append("g")
+                .attr("class", "axis y-axis-right")
                 .attr("transform", `translate(${width},0)`)
                 .call(d3.axisRight(yRight))
-                .attr("color", animalColors[animal][1]); // Couleur de l'axe Y pour la consommation de poisson
-
-            // Axe Y pour le prix moyen
+                .attr("color", animalColors[animal][1]);
+    
+            // Axe Y pour le prix
             svg.append("g")
+                .attr("class", "axis y-axis-right-price")
                 .attr("transform", `translate(${width + 30},0)`)
                 .call(d3.axisRight(yRight2))
-                .attr("color", animalColors[animal][2]); // Couleur de l'axe Y pour le prix moyen
-
-
+                .attr("color", animalColors[animal][2]);
+    
             const tooltip = d3.select("#tooltip");
-            // Variables pour stocker des références aux lignes de ticks
-            let consumptionLines = [];
-            let priceLines = [];
-
+    
             // Barres pour la consommation
-            svg.selectAll(".bar-conso")
-                .data(mergedData)
-                .enter()
+            const consumptionBars = svg.selectAll(".bar-conso")
+                .data(mergedData);
+    
+            consumptionBars.enter()
                 .append("rect")
-                .attr("class", "bar")
-                .attr("x", d => x(d.année) - 10) // Ajuster la position horizontale
+                .attr("class", "bar-conso")
+                .attr("x", d => x(d.année) - 10)
+                .attr("y", height) // Les barres démarrent à 0 (base du graphique)
+                .attr("width", 10)
+                .attr("height", 0) // Hauteur initiale de 0
+                .merge(consumptionBars)
+                .transition()
+                .duration(1000)
                 .attr("y", d => yRight(d.conso_viande))
-                .attr("width", 10) // Largeur des barres
                 .attr("height", d => height - yRight(d.conso_viande))
-                .attr("fill", animalColors[animal][1])
-                .on("mouseover", function(event, d) {
-
-                    // Afficher les lignes de ticks pour la consommation
-                    const tickValue = d.conso_viande;
-                    const line = svg.append("line")
-                        .attr("x1", 0)
-                        .attr("y1", yRight(tickValue))
-                        .attr("x2", width)
-                        .attr("y2", yRight(tickValue))
-                        .attr("stroke", "#000000")
-                        .attr("stroke-dasharray", "5,5")
-                        .attr("stroke-width", 1);
-                    
-                    // Ajouter la ligne à la liste pour pouvoir la supprimer plus tard
-                    consumptionLines.push(line);
-
-                    tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html(`Consommation: ${d.conso_viande} kg/hab<br/>Année: ${d.année}`)
-                        .style("left", (event.pageX - 550) + "px")
-                        .style("top", (event.pageY - 200) + "px");
-                    
-                    // Ajouter un contour lors du survol
-                    d3.select(this)
-                        .attr("stroke", animalColors[animal][0])
-                        .attr("stroke-width", 2); // Épaisseur du contour
-                })
-                .on("mouseout", function() {
-                    // Supprimer les lignes de ticks pour la consommation
-                    consumptionLines.forEach(line => line.remove());
-                    consumptionLines = []; // Réinitialiser le tableau
-                    tooltip.transition().duration(500).style("opacity", 0);
-                    
-                    // Retirer le contour
-                    d3.select(this)
-                        .attr("stroke", "none"); // Retirer le contour
-                });
-                
-
+                .attr("fill", animalColors[animal][1]);
+    
+            consumptionBars.exit().remove();
+    
             // Barres pour le prix
-            svg.selectAll(".bar-price")
-                .data(mergedData)
-                .enter()
+            const priceBars = svg.selectAll(".bar-price")
+                .data(mergedData);
+    
+            priceBars.enter()
                 .append("rect")
-                .attr("class", "bar")
-                .attr("x", d => x(d.année)) // Ajuster la position horizontale
+                .attr("class", "bar-price")
+                .attr("x", d => x(d.année))
+                .attr("y", height) // Les barres démarrent à 0 (base du graphique)
+                .attr("width", 10)
+                .attr("height", 0) // Hauteur initiale de 0
+                .merge(priceBars)
+                .transition()
+                .duration(1000)
                 .attr("y", d => yRight2(d.prix_moy))
-                .attr("width", 10) // Largeur des barres
                 .attr("height", d => height - yRight2(d.prix_moy))
-                .attr("fill", animalColors[animal][2])
-                .on("mouseover", function(event, d) {
-
-                    const tickValue = d.prix_moy;
-                    const line = svg.append("line")
-                        .attr("x1", 0)
-                        .attr("y1", yRight2(tickValue))
-                        .attr("x2", width)
-                        .attr("y2", yRight2(tickValue))
-                        .attr("stroke", "#000000")
-                        .attr("stroke-dasharray", "5,5")
-                        .attr("stroke-width", 0.5);
-                    
-                    // Ajouter la ligne à la liste pour pouvoir la supprimer plus tard
-                    priceLines.push(line);
-            
-
-                    tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html(`Indice Prix: ${d.prix_moy} <br/>Année: ${d.année}`)
-                        .style("left", (event.pageX - 550) + "px")
-                        .style("top", (event.pageY - 200) + "px");
-                    
-                    // Ajouter un contour lors du survol
-                    d3.select(this)
-                        .attr("stroke", animalColors[animal][0])
-                        .attr("stroke-width", 2); // Épaisseur du contour
-                })
-                .on("mouseout", function() {
-
-                    priceLines.forEach(line => line.remove());
-                    priceLines = []; // Réinitialiser le tableau
-                    tooltip.transition().duration(500).style("opacity", 0);
-                    
-                    // Retirer le contour
-                    d3.select(this)
-                        .attr("stroke", "none"); // Retirer le contour
-                });
-
+                .attr("fill", animalColors[animal][2]);
+    
+            priceBars.exit().remove();
+    
             // Courbe pour les salaires
             const line = d3.line()
                 .x(d => x(d.année))
                 .y(d => yLeft(d.ensemble));
-
-                svg.append("path")
+    
+            svg.selectAll(".salary-line").remove();
+    
+            svg.append("path")
                 .datum(mergedData)
+                .attr("class", "salary-line")
                 .attr("fill", "none")
                 .attr("stroke", animalColors[animal][0])
                 .attr("stroke-width", 4)
@@ -271,62 +223,131 @@ document.addEventListener('DOMContentLoaded', function () {
                         .attr("stroke", animalColors[animal][0]) // Remettre la couleur originale
                         .attr("stroke-width", 4); // Remettre l'épaisseur originale
                 });
-
+    
             // Légende
+            svg.selectAll(".legend").remove();
+    
             const legend = svg.append("g")
-                .attr("transform", `translate(${width / 3 - 100}, ${height + 30})`); // Positionner la légende au centre en bas du graphique
-
+                .attr("class", "legend")
+                .attr("transform", `translate(${width / 3 - 100}, ${height + 30})`);
+    
             // Légende pour l'indice de salaire
             legend.append("rect")
                 .attr("x", 0)
                 .attr("y", 0)
                 .attr("width", 10)
                 .attr("height", 10)
-                .attr("fill", animalColors[animal][0]); // Couleur de la courbe des salaires
-
+                .attr("fill", animalColors[animal][0]);
+    
             legend.append("text")
                 .attr("x", 15)
                 .attr("y", 10)
-                .text("Indice de Salaire") // Texte explicatif
+                .text("Indice de Salaire")
                 .style("font-size", "12px")
                 .attr("fill", animalColors[animal][0]);
-
-            // Légende pour la consommation de poisson
+    
+            // Légende pour la consommation
             legend.append("rect")
-                .attr("x", 120) // Décalage horizontal
+                .attr("x", 120)
                 .attr("y", 0)
                 .attr("width", 10)
                 .attr("height", 10)
-                .attr("fill", animalColors[animal][1]); // Couleur des barres de consommation de poisson
-
+                .attr("fill", animalColors[animal][1]);
+    
             legend.append("text")
-                .attr("x", 135) // Décalage horizontal
+                .attr("x", 135)
                 .attr("y", 10)
-                .text("Consommation de "+animal+" (kg/hab)")
+                .text(`Consommation de ${animal} (kg/hab)`)
                 .style("font-size", "12px")
                 .attr("fill", animalColors[animal][1]);
-
+    
             // Légende pour le prix moyen
             legend.append("rect")
-                .attr("x", 340) // Décalage horizontal
+                .attr("x", 340)
                 .attr("y", 0)
                 .attr("width", 10)
                 .attr("height", 10)
-                .attr("fill", animalColors[animal][2]); // Couleur des barres du prix moyen
-
+                .attr("fill", animalColors[animal][2]);
+    
             legend.append("text")
-                .attr("x", 355) // Décalage horizontal
+                .attr("x", 355)
                 .attr("y", 10)
                 .text("Prix Moyen (indice)")
                 .style("font-size", "12px")
                 .attr("fill", animalColors[animal][2]);
 
+            let consumptionLines = [];
+            let priceLines = [];
+            // Ajout des événements de hover
+            svg.selectAll(".bar-conso")
+                .on("mouseover", function(event, d) {
+                    const tickValue = d.conso_viande;
+                    const line = svg.append("line")
+                        .attr("x1", 0)
+                        .attr("y1", yRight(tickValue))
+                        .attr("x2", width)
+                        .attr("y2", yRight(tickValue))
+                        .attr("stroke", "#000000")
+                        .attr("stroke-dasharray", "5,5")
+                        .attr("stroke-width", 1);
+                    
+                    consumptionLines.push(line);
 
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    tooltip.html(`Consommation: ${d.conso_viande} kg/hab<br/>Année: ${d.année}`)
+                        .style("left", (event.pageX - 550) + "px")
+                        .style("top", (event.pageY - 200) + "px");
+                    
+                    d3.select(this)
+                        .attr("stroke", animalColors[animal][0])
+                        .attr("stroke-width", 2);
+                })
+                .on("mouseout", function() {
+                    consumptionLines.forEach(line => line.remove());
+                    consumptionLines = [];
+                    tooltip.transition().duration(500).style("opacity", 0);
+                    
+                    d3.select(this)
+                        .attr("stroke", "none");
+                });
 
+            svg.selectAll(".bar-price")
+                .on("mouseover", function(event, d) {
+                    const tickValue = d.prix_moy;
+                    const line = svg.append("line")
+                        .attr("x1", 0)
+                        .attr("y1", yRight2(tickValue))
+                        .attr("x2", width)
+                        .attr("y2", yRight2(tickValue))
+                        .attr("stroke", "#000000")
+                        .attr("stroke-dasharray", "5,5")
+                        .attr("stroke-width", 0.5);
+                    
+                    priceLines.push(line);
+
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    tooltip.html(`Indice Prix: ${d.prix_moy} <br/>Année: ${d.année}`)
+                        .style("left", (event.pageX - 550) + "px")
+                        .style("top", (event.pageY - 200) + "px");
+                    
+                    d3.select(this)
+                        .attr("stroke", animalColors[animal][0])
+                        .attr("stroke-width", 2);
+                })
+                .on("mouseout", function() {
+                    priceLines.forEach(line => line.remove());
+                    priceLines = [];
+                    tooltip.transition().duration(500).style("opacity", 0);
+                    
+                    d3.select(this)
+                        .attr("stroke", "none");
+                });
+    
         }).catch(function (error) {
             console.error("Erreur lors du chargement des fichiers CSV :", error);
         });
     }
+    
 
     // Modification du script d'événements
     const animals = document.querySelectorAll('.animal');
