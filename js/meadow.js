@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function createCombinationChart(animal) {
-        console.log("Création du graphique combiné pour :", animal);
         animal = animal.toLowerCase();
         console.log(animal);
         console.log(animalColors[animal]);
@@ -355,7 +354,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     animals.forEach(animal => {
         animal.addEventListener('click', function (event) {
-            console.log('Animal cliqué : ' + this.getAttribute('alt'));
             updateChartTitle(this.getAttribute('alt'));
             animals.forEach(a => a.classList.remove('active'));
 
