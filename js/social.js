@@ -77,40 +77,52 @@ document.addEventListener("DOMContentLoaded", () => {
         ==========================================
     */
 
+    function getProduction(d){
+        const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+        return productionData ? productionData.value : 0;
+    }
+
+    function getConsumption(d){
+        const selectedMeats = filters["meat"] || [];
+        let consumptionData = dataConsumption.filter(dp => 
+            dp.location === d.id && 
+            dp.year == year && 
+            dp.measure === "THND_TONNE" &&
+            selectedMeats.includes(dp.type_meat)
+        );
+
+        if (selectedMeats.length === 0) {
+            consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+        }
+
+        return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : 0;
+    }
+
+    function getPrices(d){
+        const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
+        const averages = {};
+        ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
+            const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
+            const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
+            averages[type] = typeAverage;
+        });
+
+        const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
+        const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+        const avgConsumption = consumptionData.length > 0
+            ? d3.mean(consumptionData, dp => dp.value)
+            : "Donnée indisponible";
+        const finalvalue = overallAverage*avgConsumption
+        return finalvalue ? finalvalue : 0;
+    }
+
     function valueAccessor(d) {
         if (mode == "PRODUCTION") {
-            const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-            return productionData ? productionData.value : 0;
+            return getProduction(d);
         } else if (mode == "CONSUMPTION") {
-            const selectedMeats = filters["meat"] || [];
-            let consumptionData = dataConsumption.filter(dp => 
-                dp.location === d.id && 
-                dp.year == year && 
-                dp.measure === "THND_TONNE" &&
-                selectedMeats.includes(dp.type_meat)
-            );
-    
-            if (selectedMeats.length === 0) {
-                consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-            }
-    
-            return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : 0;
+            return getConsumption(d);
         } else if (mode == "PRICE") {
-            const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
-            const averages = {};
-            ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
-                const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
-                const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
-                averages[type] = typeAverage;
-            });
-
-            const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
-            const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-            const avgConsumption = consumptionData.length > 0
-                ? d3.mean(consumptionData, dp => dp.value)
-                : "Donnée indisponible";
-            const finalvalue = overallAverage*avgConsumption
-            return finalvalue ? finalvalue : 0;
+            return getPrices(d);
         }
         return 0;
     };
@@ -170,43 +182,27 @@ document.addEventListener("DOMContentLoaded", () => {
             let infoHTML = `<strong>${d.properties.name}</strong>`;
 
             if (mode == "PRODUCTION") {
-                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-                infoHTML += `<br>Production : ${productionData ? productionData.value.toLocaleString() + " tonnes" : "Donnée indisponible"}`;
+                const productionData = getProduction(d);
+                infoHTML += `<br>Production : ${productionData !== 0 
+                    ? (productionData).toLocaleString() + " tonnes" 
+                    : "Donnée indisponible"
+                  }`;
             }
 
             if (mode == "CONSUMPTION") {
-                const selectedMeats = filters["meat"] || [];
-                let consumptionData = dataConsumption.filter(dp => 
-                    dp.location === d.id && 
-                    dp.year == year && 
-                    dp.measure === "THND_TONNE" &&
-                    selectedMeats.includes(dp.type_meat)
-                );
-        
-                if (selectedMeats.length === 0) {
-                    consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                }
-                const sumConsumption = consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value) : "Donnée indisponible";
-                infoHTML += `<br>Consommation : ${sumConsumption !== "Donnée indisponible" ? sumConsumption.toLocaleString() + " tonnes" : sumConsumption}`;
+                const consumptionData = getConsumption(d);
+                infoHTML += `<br>Consommation : ${consumptionData !== 0 
+                    ? (consumptionData).toLocaleString() + " tonnes" 
+                    : "Donnée indisponible"
+                  }`;
             }
 
             if (mode == "PRICE") {
-                const filteredData = dataPrice.filter(dp => dp.month.split('-')[1] == String(year).slice(-2));
-                const averages = {};
-                ['beef_price', 'chicken_price', 'lamb_price', 'pork_price', 'salmon_price'].forEach(type => {
-                    const typePrices = filteredData.map(dp => dp[type]).filter(price => price != null);
-                    const typeAverage = typePrices.reduce((sum, price) => sum + price, 0) / typePrices.length;
-                    averages[type] = typeAverage;
-                });
-
-                const overallAverage = Object.values(averages).reduce((sum, avg) => sum + avg, 0) / Object.values(averages).length;
-                
-                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                const avgConsumption = consumptionData.length > 0
-                    ? d3.mean(consumptionData, dp => dp.value)
-                    : "Donnée indisponible";
-                const finalvalue = overallAverage*avgConsumption
-                infoHTML += `<br>Prix : ${finalvalue ? finalvalue.toLocaleString() + " € de viande consommés" : "Donnée indisponible"}`;
+                const priceData = getPrices(d);
+                infoHTML += `<br>Prix : ${priceData !== 0 
+                    ? (priceData).toLocaleString() + " euros" 
+                    : "Donnée indisponible"
+                  }`;
             }
 
             tooltipChart.style("opacity", 1)

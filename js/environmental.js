@@ -73,17 +73,27 @@ document.addEventListener("DOMContentLoaded", () => {
         ==========================================
     */
 
-    function valueAccessor(d) {
+    function getProdutionEmission(d){
+        let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
+
+        const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
+        return productionData? (productionData.value)*total_production : 0;
+    }
+
+    function getConsumptionEmission(d){
         let total_production = dataEmission.reduce((acc, item) => acc + item.total_from_land_to_retail, 0) / dataEmission.length;
         let total_average = dataEmission.reduce((acc, item) => acc + item.total_average, 0) / dataEmission.length;
         let total_consumption = total_average-total_production;
+        
+        const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
+        return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value)*total_consumption : 0;   
+    }
 
+    function valueAccessor(d) {
         if (mode == "PRODUCTIONEMISSION") {
-            const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-            return productionData? (productionData.value)*total_production : 0;
+            return getProdutionEmission(d);
         } else {
-            const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-            return consumptionData.length > 0 ? d3.sum(consumptionData, dp => dp.value)*total_consumption : 0;
+            return getConsumptionEmission(d);
         }
     };
 
@@ -131,25 +141,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }        
     
     function handleMouseOver(event, d) {
-        const totalProductionSum = dataEmission.reduce((sum, item) => sum + item.total_from_land_to_retail, 0);
-        const totalAverageSum = dataEmission.reduce((sum, item) => sum + item.total_average, 0);
-        const itemCount = dataEmission.length;
-
-        let total_production = totalProductionSum / itemCount;
-        let total_average = totalAverageSum / itemCount;
-        let total_consumption = total_average-total_production;
         if (d.id !== "BMU") {
             let infoHTML = `<strong>${d.properties.name}</strong>`;
         
             if (mode == "PRODUCTIONEMISSION") {
-                const productionData = dataProduction.find(dp => dp.code === d.id && dp.year == year);
-                infoHTML += `<br>C02/Production : ${productionData ? ((productionData.value) * total_production).toLocaleString() + " tonnes" : "Donnée indisponible"}`;
+                const productionData = getProdutionEmission(d);
+                infoHTML += `<br>CO2/Production : ${productionData !== 0 
+                    ? (productionData).toLocaleString() + " tonnes" 
+                    : "Donnée indisponible"
+                  }`;
             } else {
-                const consumptionData = dataConsumption.filter(dp => dp.location === d.id && dp.year == year && dp.measure === "THND_TONNE");
-                const avgConsumption = consumptionData.length > 0 
-                    ? d3.sum(consumptionData, dp => dp.value)*total_consumption
-                    : "Donnée indisponible";
-                infoHTML += `<br>C02/Consommation : ${avgConsumption !== "Donnée indisponible" ? avgConsumption.toLocaleString() + " tonnes" : avgConsumption}`;
+                const avgConsumption = getConsumptionEmission(d);
+                infoHTML += `<br>CO2/Consommation : ${avgConsumption !== 0 
+                    ? (avgConsumption).toLocaleString() + " tonnes" 
+                    : "Donnée indisponible"
+                  }`;
             }
         
             tooltipChart.style("opacity", 1)
