@@ -1,7 +1,12 @@
 # Proposition d’application - Challenge Open Data 3A
+
 ### Jordan Josserand, Florian Cunsolo, Wafi Grissi, Clément Correnoz, Hippolyte Bergeon
 
-## Utilisation
+## Lien du site
+
+Le site est disponible en déploiement grâce à github : [https://jojo-jrd.github.io/ensimag-challenge-open-data](https://jojo-jrd.github.io/ensimag-challenge-open-data)
+
+## Utilisation en local
 
 Pour pouvoir acceder à la page web, il est nécessaire de lancer la commande : 
 ```bash
